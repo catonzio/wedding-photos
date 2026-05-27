@@ -1,0 +1,17 @@
+[project]
+name = "wedding-photos"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Danilo Catone", email = "danilocatone@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = []
+
+[project.scripts]
+wedding-photos = "wedding_photos:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
