@@ -13,4 +13,4 @@ wheels/
 .env
 
 # Static images
-src/wedding_photos/static
+static
