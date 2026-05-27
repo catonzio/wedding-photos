@@ -10,7 +10,8 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from wedding_photos.config import TEMPLATES_DIR, load_tables
+from wedding_photos.config import TEMPLATES_DIR
+from wedding_photos.models import load_tables
 
 router = APIRouter()
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
