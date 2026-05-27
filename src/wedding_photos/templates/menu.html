@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Tavoli · Il Nostro Matrimonio{% endblock %}
+
+{% block content %}
+<div class="max-w-[480px] mx-auto px-5 py-6">
+
+    <!-- Page header -->
+    <div class="text-center mb-6">
+        <h2 class="font-serif font-light italic text-3xl text-text leading-tight">I Tavoli</h2>
+        <p class="font-sans font-light text-muted text-sm mt-1 tracking-wide">
+            Sfoglia le foto del tuo tavolo
+        </p>
+    </div>
+
+    <!-- Decorative divider -->
+    <div class="divider mb-6">
+        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                stroke="currentColor" stroke-width="1.4" />
+            <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
+    </div>
+
+    <!-- Table grid -->
+    <div class="grid grid-cols-2 gap-4">
+        {% for table in tables %}
+        <a href="{{ url_for('table_page', table_id=table.id) }}?t={{ token }}"
+            class="group block rounded overflow-hidden border border-border bg-surface shadow-[0_1px_4px_rgba(0,0,0,0.07)] transition-transform duration-150 active:scale-[0.97]">
+            <!-- Cover image -->
+            <div class="aspect-[4/3] bg-sage-light overflow-hidden">
+                {% if table.cover %}
+                <img src="{{ url_for('static', path='media/' ~ table.cover) }}" alt="{{ table.name }}"
+                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    loading="lazy" />
+                {% else %}
+                <!-- Placeholder if no cover -->
+                <div class="w-full h-full flex items-center justify-center">
+                    <svg width="32" height="32" viewBox="0 0 20 20" fill="none" class="text-sage opacity-40">
+                        <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                            stroke="currentColor" stroke-width="1.2" />
+                        <path d="M10 18V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                    </svg>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Table name -->
+            <div class="px-3 py-2.5">
+                <p class="font-serif font-light text-[1.05rem] text-text leading-tight line-clamp-2">
+                    {{ table.name }}
+                </p>
+                {% if table.media %}
+                <p class="font-sans font-light text-[0.7rem] text-muted mt-1 tracking-wide">
+                    {{ table.media | length }} foto{% if table.media | length != 1 %}{% endif %}
+                </p>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if not tables %}
+    <div class="text-center py-16">
+        <p class="font-serif italic text-muted text-lg">Nessun tavolo ancora configurato.</p>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

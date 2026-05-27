@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}{{ table.name }} · Il Nostro Matrimonio{% endblock %}
+
+{% block head_extra %}
+<!-- Swiper.js -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<style>
+    /* Swiper customization */
+    .swiper-pagination-bullet {
+        width: 6px;
+        height: 6px;
+        background: #E8D9A0;
+        opacity: 1;
+        transition: all 0.2s;
+    }
+
+    .swiper-pagination-bullet-active {
+        background: #B8972E;
+        width: 20px;
+        border-radius: 3px;
+    }
+
+    /* Video inside carousel */
+    .swiper-slide video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* Slide counter overlay */
+    .slide-counter {
+        position: absolute;
+        top: 0.75rem;
+        right: 0.75rem;
+        z-index: 10;
+        background: rgba(45, 44, 40, 0.45);
+        backdrop-filter: blur(4px);
+        color: #fff;
+        font-family: 'Jost', sans-serif;
+        font-weight: 300;
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        padding: 0.2rem 0.6rem;
+        border-radius: 999px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ========================================================
+     Carousel — full bleed (no horizontal padding)
+======================================================== -->
+<div class="relative" x-data="{ current: 1, total: {{ table.media | length }} }">
+
+    <div class="swiper w-full aspect-[4/3] bg-sage-light" x-init="
+         const sw = new Swiper($el, {
+           loop: false,
+           pagination: { el: '.swiper-pagination', clickable: true },
+           on: { slideChange(s) { current = s.activeIndex + 1 } }
+         })
+       ">
+        <div class="swiper-wrapper">
+            {% for item in table.media %}
+            <div class="swiper-slide">
+                {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
+                <video src="{{ url_for('static', path='media/' ~ item) }}" controls playsinline preload="metadata"
+                    class="w-full h-full object-cover"></video>
+                {% else %}
+                <img src="{{ url_for('static', path='media/' ~ item) }}" alt="Foto {{ loop.index }} — {{ table.name }}"
+                    class="w-full h-full object-cover" loading="{% if loop.first %}eager{% else %}lazy{% endif %}" />
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination dots -->
+        <div class="swiper-pagination" style="bottom: 0.75rem;"></div>
+    </div>
+
+    <!-- Slide counter -->
+    <div class="slide-counter" x-text="`${current} / ${total}`"></div>
+</div>
+
+
+<!-- ========================================================
+     Table info
+======================================================== -->
+<div class="max-w-[480px] mx-auto px-5">
+
+    <!-- Table title -->
+    <div class="mt-6">
+        <h2 class="font-serif font-light text-3xl text-text leading-tight">{{ table.name }}</h2>
+    </div>
+
+    <!-- Decorative divider -->
+    <div class="divider my-4">
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                stroke="currentColor" stroke-width="1.4" />
+            <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+        </svg>
+    </div>
+
+    <!-- Description -->
+    {% if table.description %}
+    <p class="font-sans font-light text-base text-text leading-relaxed">
+        {{ table.description }}
+    </p>
+    {% endif %}
+
+    <!-- Media count -->
+    {% if table.media %}
+    <div class="mt-5 flex items-center gap-2">
+        <span class="font-sans text-[0.7rem] font-500 tracking-[0.12em] uppercase text-muted">
+            {{ table.media | length }} foto in questo tavolo
+        </span>
+    </div>
+    {% endif %}
+
+    <!-- Back to menu link -->
+    <div class="mt-8 mb-2">
+        <a href="{{ url_for('menu_page') }}?t={{ token }}"
+            class="inline-flex items-center gap-1.5 font-sans text-sm font-light text-sage tracking-wide transition-opacity hover:opacity-70">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+            </svg>
+            Tutti i tavoli
+        </a>
+    </div>
+
+</div>
+{% endblock %}

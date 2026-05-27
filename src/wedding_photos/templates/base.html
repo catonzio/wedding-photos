@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#F8F7F2" />
+    <title>{% block title %}Il Nostro Matrimonio{% endblock %}</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap"
+        rel="stylesheet" />
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#F8F7F2',
+                        surface: '#FFFFFF',
+                        text: '#2D2C28',
+                        muted: '#7C7B72',
+                        gold: '#B8972E',
+                        'gold-light': '#E8D9A0',
+                        sage: '#7A9069',
+                        'sage-light': '#E4EAE0',
+                        border: '#E2E0D6',
+                    },
+                    fontFamily: {
+                        serif: ['"Cormorant Garamond"', 'Georgia', 'serif'],
+                        sans: ['Jost', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Swiper.js (only loaded where needed via block) -->
+    {% block head_extra %}{% endblock %}
+
+    <style>
+        /* Global base */
+        body {
+            font-family: 'Jost', system-ui, sans-serif;
+            background-color: #F8F7F2;
+            color: #2D2C28;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Page fade-in */
+        .page-fade {
+            animation: pageFadeIn 0.4s ease forwards;
+        }
+
+        @keyframes pageFadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Decorative divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: #B8972E;
+            margin: 1.5rem 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background-color: #E2E0D6;
+        }
+
+        /* Safe area padding */
+        .pb-safe {
+            padding-bottom: max(1rem, env(safe-area-inset-bottom));
+        }
+
+        .pt-safe {
+            padding-top: max(0px, env(safe-area-inset-top));
+        }
+    </style>
+</head>
+
+<body class="min-h-screen bg-bg">
+
+    <!-- ======================================================
+       Navigation bar
+  ====================================================== -->
+    <div x-data="{ drawerOpen: false }" @keydown.escape.window="drawerOpen = false" class="relative">
+        <!-- Sticky navbar -->
+        <header
+            class="sticky top-0 z-30 flex items-center justify-between h-14 px-4 bg-surface/90 backdrop-blur-md border-b border-border"
+            style="padding-top: env(safe-area-inset-top, 0px);">
+            <!-- Hamburger button -->
+            <button @click="drawerOpen = true"
+                class="w-10 h-10 flex items-center justify-center rounded-full text-text transition-colors hover:bg-sage-light active:bg-sage-light"
+                aria-label="Apri il menu">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                </svg>
+            </button>
+
+            <!-- Title -->
+            <h1 class="font-serif font-light italic text-text text-lg tracking-wide select-none">
+                Il Nostro Matrimonio
+            </h1>
+
+            <!-- Right spacer / decoration -->
+            <div class="w-10 h-10 flex items-center justify-center">
+                <!-- Small leaf decoration -->
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"
+                    class="text-sage opacity-60">
+                    <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                        stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" />
+                    <path d="M10 18V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                </svg>
+            </div>
+        </header>
+
+        <!-- Drawer overlay -->
+        <div x-show="drawerOpen" x-transition:enter="transition-opacity duration-300"
+            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity duration-300" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0" @click="drawerOpen = false" class="fixed inset-0 z-40 bg-text/40"
+            style="display: none;" aria-hidden="true"></div>
+
+        <!-- Side drawer -->
+        <aside x-show="drawerOpen" x-transition:enter="transition-transform duration-300 ease-out"
+            x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
+            x-transition:leave="transition-transform duration-300 ease-in" x-transition:leave-start="translate-x-0"
+            x-transition:leave-end="-translate-x-full"
+            class="fixed top-0 left-0 z-50 h-full w-[85vw] max-w-[360px] bg-surface shadow-xl flex flex-col"
+            style="display: none; padding-top: env(safe-area-inset-top, 0px);">
+            <!-- Drawer header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-border">
+                <div>
+                    <p class="font-serif italic text-xl font-light text-text">Il Nostro Matrimonio</p>
+                    <p class="font-sans text-xs font-light text-muted tracking-widest uppercase mt-0.5">
+                        {% if token %}{{ token[:8] ~ '…' }}{% endif %}
+                    </p>
+                </div>
+                <button @click="drawerOpen = false"
+                    class="w-8 h-8 flex items-center justify-center rounded-full text-muted hover:bg-sage-light transition-colors"
+                    aria-label="Chiudi il menu">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-4 h-4">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Drawer table list -->
+            <nav class="flex-1 overflow-y-auto py-3">
+                <p class="px-5 mb-2 font-sans text-[0.65rem] font-500 tracking-[0.14em] uppercase text-muted">Tavoli</p>
+                {% for table in all_tables %}
+                <a href="{{ url_for('table_page', table_id=table.id) }}?t={{ token }}" @click="drawerOpen = false"
+                    class="flex items-center gap-3 px-5 py-3 transition-colors hover:bg-sage-light active:bg-sage-light
+                 {% if current_table_id is defined and current_table_id == table.id %}bg-sage-light border-l-2 border-sage{% endif %}">
+                    <!-- Cover thumbnail -->
+                    <div class="w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-sage-light">
+                        {% if table.cover %}
+                        <img src="{{ url_for('static', path='media/' ~ table.cover) }}" alt="{{ table.name }}"
+                            class="w-full h-full object-cover" loading="lazy" />
+                        {% endif %}
+                    </div>
+                    <span class="font-serif text-base font-light text-text leading-tight">{{ table.name }}</span>
+                </a>
+                {% endfor %}
+            </nav>
+
+            <!-- Drawer footer -->
+            <div class="px-5 py-4 border-t border-border">
+                <div class="divider text-xs font-sans font-light text-muted">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                            stroke="currentColor" stroke-width="1.4" />
+                        <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+                    </svg>
+                </div>
+                <p class="font-sans text-[0.7rem] text-muted text-center font-light">
+                    Con amore ♡
+                </p>
+            </div>
+        </aside>
+
+        <!-- ======================================================
+         Page content
+    ====================================================== -->
+        <main class="page-fade pb-safe">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>
