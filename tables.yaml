@@ -1,0 +1,61 @@
+tables:
+  - id: 1
+    name: "Tavolo degli Sposi"
+    description: "Il tavolo principale, al centro di tutto. Qui siedono gli sposi con le loro famiglie, tra risate e lacrime di gioia."
+    cover: "table_1/cover.jpg"
+    media:
+      - "table_1/foto_1.jpg"
+      - "table_1/foto_2.jpg"
+      - "table_1/foto_3.jpg"
+      - "table_1/foto_4.jpg"
+      - "table_1/foto_5.jpg"
+
+  - id: 2
+    name: "Tavolo dei Testimoni"
+    description: "Gli amici di una vita, quelli che ci conoscono meglio di chiunque altro. Questo tavolo è dedicato a loro."
+    cover: "table_2/cover.jpg"
+    media:
+      - "table_2/foto_1.jpg"
+      - "table_2/foto_2.jpg"
+      - "table_2/foto_3.jpg"
+      - "table_2/foto_4.jpg"
+
+  - id: 3
+    name: "Tavolo dei Nonni"
+    description: "La saggezza e l'amore di chi ci ha preceduto. Un tavolo d'onore."
+    cover: "table_3/cover.jpg"
+    media:
+      - "table_3/foto_1.jpg"
+      - "table_3/foto_2.jpg"
+      - "table_3/foto_3.jpg"
+
+  - id: 4
+    name: "Tavolo dei Cugini"
+    description: "Il tavolo più rumoroso e festoso della serata, come sempre."
+    cover: "table_4/cover.jpg"
+    media:
+      - "table_4/foto_1.jpg"
+      - "table_4/foto_2.jpg"
+      - "table_4/foto_3.jpg"
+      - "table_4/foto_4.jpg"
+      - "table_4/foto_5.jpg"
+      - "table_4/foto_6.jpg"
+
+  - id: 5
+    name: "Tavolo degli Amici del Liceo"
+    description: "Vent'anni di amicizia, di avventure condivise e di segreti custoditi."
+    cover: "table_5/cover.jpg"
+    media:
+      - "table_5/foto_1.jpg"
+      - "table_5/foto_2.jpg"
+      - "table_5/foto_3.jpg"
+      - "table_5/foto_4.jpg"
+
+  - id: 6
+    name: "Tavolo dei Colleghi"
+    description: "Il lavoro unisce le persone, ma l'amicizia le tiene insieme."
+    cover: "table_6/cover.jpg"
+    media:
+      - "table_6/foto_1.jpg"
+      - "table_6/foto_2.jpg"
+      - "table_6/foto_3.jpg"
