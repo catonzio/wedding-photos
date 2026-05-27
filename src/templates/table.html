@@ -52,86 +52,312 @@
 {% block content %}
 
 <!-- ========================================================
-     Carousel — full bleed (no horizontal padding)
+     Page — carousel + info + lightbox share one Alpine scope
+     lbItems contains only images (videos are excluded)
 ======================================================== -->
-<div class="relative" x-data="{ current: 1, total: {{ table.media | length }} }">
+<div x-data="{
+    /* ── carousel ── */
+    current: 1,
+    total: {{ table.media | length }},
 
-    <div class="swiper w-full aspect-[4/3] bg-sage-light" x-init="
-         const sw = new Swiper($el, {
-           loop: false,
-           pagination: { el: '.swiper-pagination', clickable: true },
-           on: { slideChange(s) { current = s.activeIndex + 1 } }
-         })
-       ">
-        <div class="swiper-wrapper">
-            {% for item in table.media %}
-            <div class="swiper-slide">
-                {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
-                <video src="{{ url_for('static', path='media/' ~ item) }}" controls playsinline preload="metadata"
-                    class="w-full h-full object-cover"></video>
-                {% else %}
-                <img src="{{ url_for('static', path='media/' ~ item) }}" alt="Foto {{ loop.index }} — {{ table.name }}"
-                    class="w-full h-full object-cover" loading="{% if loop.first %}eager{% else %}lazy{% endif %}" />
-                {% endif %}
+    /* ── lightbox items (images only, built from server data) ── */
+    lbItems: [
+        {% set img_i = namespace(v=0) %}
+        {% for item in table.media %}
+        {% if not (item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm')) %}
+        { src: '{{ url_for('static', path='media/' ~ item) }}', alt: 'Foto {{ loop.index }} \u2014 {{ table.name }}' },
+        {% set img_i.v = img_i.v + 1 %}
+        {% endif %}
+        {% endfor %}
+    ],
+
+    /* ── lightbox state ── */
+    lb: {
+        open:     false,
+        idx:      0,
+        scale:    1,
+        tx: 0,    ty: 0,
+        dragging: false,
+        _ox: 0,   _oy: 0,
+        _pd: 0,   _ps: 1,
+        _sx: 0,   _sy: 0,   /* swipe start */
+        scrollY:  0
+    },
+
+    /* open at a specific image index */
+    openLb(idx) {
+        this.lb.idx    = idx;
+        this.lb.scale  = 1;
+        this.lb.tx     = 0;
+        this.lb.ty     = 0;
+        this.lb.open   = true;
+        this.lb.scrollY = window.scrollY;
+        document.body.style.position   = 'fixed';
+        document.body.style.top        = `-${this.lb.scrollY}px`;
+        document.body.style.overflow   = 'hidden';
+        document.body.style.width      = '100%';
+    },
+    closeLb() {
+        this.lb.open = false;
+        document.body.style.position = '';
+        document.body.style.top      = '';
+        document.body.style.overflow = '';
+        document.body.style.width    = '';
+        window.scrollTo(0, this.lb.scrollY);
+    },
+
+    /* navigation (resets zoom) */
+    lbNext() {
+        this.lb.idx   = (this.lb.idx + 1) % this.lbItems.length;
+        this.lb.scale = 1; this.lb.tx = 0; this.lb.ty = 0;
+    },
+    lbPrev() {
+        this.lb.idx   = (this.lb.idx - 1 + this.lbItems.length) % this.lbItems.length;
+        this.lb.scale = 1; this.lb.tx = 0; this.lb.ty = 0;
+    },
+
+    /* zoom */
+    zoomIn()  { this.lb.scale = Math.min(this.lb.scale * 1.5, 8); },
+    zoomOut() {
+        this.lb.scale = Math.max(this.lb.scale / 1.5, 1);
+        if (this.lb.scale <= 1) { this.lb.tx = 0; this.lb.ty = 0; }
+    },
+    onWheel(e) {
+        e.preventDefault();
+        const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        this.lb.scale = Math.max(1, Math.min(8, this.lb.scale * f));
+        if (this.lb.scale <= 1) { this.lb.tx = 0; this.lb.ty = 0; }
+    },
+
+    /* mouse pan */
+    dragStart(e) {
+        if (this.lb.scale <= 1) return;
+        this.lb.dragging = true;
+        this.lb._ox = e.clientX - this.lb.tx;
+        this.lb._oy = e.clientY - this.lb.ty;
+    },
+    dragMove(e) {
+        if (!this.lb.dragging) return;
+        this.lb.tx = e.clientX - this.lb._ox;
+        this.lb.ty = e.clientY - this.lb._oy;
+    },
+    dragEnd() { this.lb.dragging = false; },
+
+    /* touch: pan when zoomed, swipe to navigate when at 1× */
+    touchStart(e) {
+        if (e.touches.length === 2) {
+            this.lb._pd = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            this.lb._ps = this.lb.scale;
+        } else if (e.touches.length === 1) {
+            this.lb._sx = e.touches[0].clientX;
+            this.lb._sy = e.touches[0].clientY;
+            if (this.lb.scale > 1) {
+                this.lb.dragging = true;
+                this.lb._ox = e.touches[0].clientX - this.lb.tx;
+                this.lb._oy = e.touches[0].clientY - this.lb.ty;
+            }
+        }
+    },
+    touchMove(e) {
+        e.preventDefault();
+        if (e.touches.length === 2) {
+            const d = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            this.lb.scale = Math.max(1, Math.min(8, this.lb._ps * d / this.lb._pd));
+            if (this.lb.scale <= 1) { this.lb.tx = 0; this.lb.ty = 0; }
+        } else if (e.touches.length === 1 && this.lb.dragging) {
+            this.lb.tx = e.touches[0].clientX - this.lb._ox;
+            this.lb.ty = e.touches[0].clientY - this.lb._oy;
+        }
+    },
+    touchEnd(e) {
+        this.lb.dragging = false;
+        if (this.lb.scale <= 1 && e.changedTouches.length === 1) {
+            const dx = e.changedTouches[0].clientX - this.lb._sx;
+            const dy = e.changedTouches[0].clientY - this.lb._sy;
+            if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                dx < 0 ? this.lbNext() : this.lbPrev();
+            }
+        }
+    }
+
+}" @keydown.escape.window="lb.open && closeLb()" @keydown.arrow-left.window="lb.open && lbPrev()"
+    @keydown.arrow-right.window="lb.open && lbNext()">
+
+    <!-- ====================================================
+         Carousel — full bleed on mobile, page-width on desktop
+    ==================================================== -->
+    <div class="relative md:max-w-[480px] md:mx-auto">
+
+        <div class="swiper w-full aspect-[4/3] bg-sage-light" x-init="
+             new Swiper($el, {
+               loop: false,
+               pagination: { el: '.swiper-pagination', clickable: true },
+               on: { slideChange(s) { current = s.activeIndex + 1 } }
+             })">
+            <div class="swiper-wrapper">
+                {% set img_j = namespace(v=0) %}
+                {% for item in table.media %}
+                <div class="swiper-slide">
+                    {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
+                    <video src="{{ url_for('static', path='media/' ~ item) }}" controls playsinline preload="metadata"
+                        class="w-full h-full object-cover"></video>
+                    {% else %}
+                    <img src="{{ url_for('static', path='media/' ~ item) }}"
+                        alt="Foto {{ loop.index }} — {{ table.name }}" class="w-full h-full object-cover cursor-zoom-in"
+                        loading="{% if loop.first %}eager{% else %}lazy{% endif %}" @click="openLb({{ img_j.v }})" />
+                    {% set img_j.v = img_j.v + 1 %}
+                    {% endif %}
+                </div>
+                {% endfor %}
             </div>
-            {% endfor %}
+            <div class="swiper-pagination" style="bottom: 0.75rem;"></div>
         </div>
 
-        <!-- Pagination dots -->
-        <div class="swiper-pagination" style="bottom: 0.75rem;"></div>
+        <div class="slide-counter" x-text="`${current} / ${total}`"></div>
     </div>
 
-    <!-- Slide counter -->
-    <div class="slide-counter" x-text="`${current} / ${total}`"></div>
-</div>
 
+    <!-- ====================================================
+         Table info
+    ==================================================== -->
+    <div class="max-w-[480px] mx-auto px-5">
 
-<!-- ========================================================
-     Table info
-======================================================== -->
-<div class="max-w-[480px] mx-auto px-5">
+        <!-- Table title -->
+        <div class="mt-6">
+            <h2 class="font-serif font-light text-3xl text-text leading-tight">{{ table.name }}</h2>
+        </div>
 
-    <!-- Table title -->
-    <div class="mt-6">
-        <h2 class="font-serif font-light text-3xl text-text leading-tight">{{ table.name }}</h2>
-    </div>
-
-    <!-- Decorative divider -->
-    <div class="divider my-4">
-        <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
-                stroke="currentColor" stroke-width="1.4" />
-            <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-        </svg>
-    </div>
-
-    <!-- Description -->
-    {% if table.description %}
-    <p class="font-sans font-light text-base text-text leading-relaxed">
-        {{ table.description }}
-    </p>
-    {% endif %}
-
-    <!-- Media count -->
-    {% if table.media %}
-    <div class="mt-5 flex items-center gap-2">
-        <span class="font-sans text-[0.7rem] font-500 tracking-[0.12em] uppercase text-muted">
-            {{ table.media | length }} foto in questo tavolo
-        </span>
-    </div>
-    {% endif %}
-
-    <!-- Back to menu link -->
-    <div class="mt-8 mb-2">
-        <a href="{{ url_for('menu_page') }}?t={{ token }}"
-            class="inline-flex items-center gap-1.5 font-sans text-sm font-light text-sage tracking-wide transition-opacity hover:opacity-70">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                stroke="currentColor" class="w-4 h-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+        <!-- Decorative divider -->
+        <div class="divider my-4">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                    stroke="currentColor" stroke-width="1.4" />
+                <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
             </svg>
-            Tutti i tavoli
-        </a>
+        </div>
+
+        <!-- Description -->
+        {% if table.description %}
+        <p class="font-sans font-light text-base text-text leading-relaxed">
+            {{ table.description }}
+        </p>
+        {% endif %}
+
+        <!-- Media count -->
+        {% if table.media %}
+        <div class="mt-5 flex items-center gap-2">
+            <span class="font-sans text-[0.7rem] font-500 tracking-[0.12em] uppercase text-muted">
+                {{ table.media | length }} foto in questo tavolo
+            </span>
+        </div>
+        {% endif %}
+
+        <!-- Back to menu link -->
+        <div class="mt-8 mb-2">
+            <a href="{{ url_for('menu_page') }}?t={{ token }}"
+                class="inline-flex items-center gap-1.5 font-sans text-sm font-light text-sage tracking-wide transition-opacity hover:opacity-70">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                </svg>
+                Tutti i tavoli
+            </a>
+        </div>
+
     </div>
+
+
+    <!-- ====================================================
+         Lightbox — fixed, full viewport
+    ==================================================== -->
+    <template x-teleport="body">
+        <div x-show="lb.open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-[9999] flex items-center justify-center"
+            style="background:rgba(12,10,8,0.93);backdrop-filter:blur(12px);" @click.self="closeLb()"
+            @wheel.prevent="onWheel($event)" @mousemove="dragMove($event)" @mouseup="dragEnd()" @mouseleave="dragEnd()"
+            @touchstart.passive="touchStart($event)" @touchmove.prevent="touchMove($event)"
+            @touchend="touchEnd($event)">
+
+            <!-- Image — centred, constrained to viewport -->
+            <img :src="lbItems[lb.idx]?.src" :alt="lbItems[lb.idx]?.alt" :style="`
+                    display: block;
+                    max-width: 100vw;
+                    max-height: 100dvh;
+                    object-fit: contain;
+                    cursor: ${lb.scale > 1 ? (lb.dragging ? 'grabbing' : 'grab') : 'zoom-out'};
+                    transform: translate(${lb.tx}px, ${lb.ty}px) scale(${lb.scale});
+                    transform-origin: center center;
+                    transition: ${lb.dragging ? 'none' : 'transform 0.15s ease'};
+                    will-change: transform;
+                    user-select: none;
+                    -webkit-user-drag: none;
+                `" @mousedown.prevent="dragStart($event)" draggable="false" />
+
+            <!-- Close -->
+            <button @click="closeLb()" aria-label="Chiudi" style="position:absolute;top:1rem;right:1rem;"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Prev -->
+            <button @click="lbPrev()" aria-label="Precedente" x-show="lbItems.length > 1"
+                style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
+            </button>
+
+            <!-- Next -->
+            <button @click="lbNext()" aria-label="Successiva" x-show="lbItems.length > 1"
+                style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+            </button>
+
+            <!-- Bottom bar: photo counter + zoom controls -->
+            <div style="position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);"
+                class="flex items-center gap-3">
+                <!-- zoom out -->
+                <button @click="zoomOut()" aria-label="Zoom out"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" />
+                    </svg>
+                </button>
+
+                <!-- photo counter -->
+                <span class="text-white/60 font-sans text-xs tabular-nums"
+                    x-text="`${lb.idx + 1} / ${lbItems.length}`"></span>
+
+                <!-- zoom in -->
+                <button @click="zoomIn()" aria-label="Zoom in"
+                    class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                </button>
+            </div>
+
+        </div>
+    </template>
 
 </div>
 {% endblock %}
