@@ -11,3 +11,6 @@ wheels/
 
 # Environment variable files
 .env
+
+# Static images
+src/wedding_photos/static
