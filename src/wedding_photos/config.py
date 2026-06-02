@@ -30,3 +30,28 @@ if not SECRET_TOKEN:
         "SECRET_TOKEN environment variable is not set. "
         'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
     )
+
+ADMIN_TOKEN: str = os.getenv("ADMIN_TOKEN", "")
+if not ADMIN_TOKEN:
+    raise RuntimeError(
+        "ADMIN_TOKEN environment variable is not set. "
+        'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
+    )
+
+GUESTS_YAML: str = os.getenv("GUESTS_YAML", str(BASE_DIR / "guests.yaml"))
+
+# ---------------------------------------------------------------------------
+# MinIO
+# ---------------------------------------------------------------------------
+MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
+MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_BUCKET: str = os.getenv("MINIO_BUCKET", "wedding-uploads")
+MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+DATABASE_URL: str = os.getenv(
+    "DATABASE_URL", "postgresql+asyncpg://wedding:wedding@localhost:5432/wedding"
+)

@@ -27,6 +27,11 @@ async def require_token(request: Request, call_next: Any) -> Response:
     if path.startswith("/static"):
         return await call_next(request)
 
+    # Admin endpoints are protected by ADMIN_TOKEN Bearer header (checked in the
+    # route dependency), not by the guest-facing secret token.
+    if path.startswith("/api/admin"):
+        return await call_next(request)
+
     token = request.query_params.get("t", "")
     if token != SECRET_TOKEN:
         return _templates.TemplateResponse(request=request, name="denied.html")

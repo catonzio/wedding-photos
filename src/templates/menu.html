@@ -3,68 +3,460 @@
 {% block title %}Tavoli · Il Nostro Matrimonio{% endblock %}
 
 {% block content %}
-<div class="max-w-[480px] mx-auto px-5 py-6">
+<div class="max-w-[480px] mx-auto px-5 py-6" x-data="weddingApp('{{ token }}')" @keydown.escape.window="closeDialog()">
 
-    <!-- Page header -->
-    <div class="text-center mb-6">
-        <h2 class="font-serif font-light italic text-3xl text-text leading-tight">I Tavoli</h2>
-        <p class="font-sans font-light text-muted text-sm mt-1 tracking-wide">
-            Sfoglia le foto del tuo tavolo
-        </p>
+    <!-- ── Tab bar ─────────────────────────────────────────────────────── -->
+    <div class="flex mb-6 border-b border-border">
+        <button @click="activeTab = 'tavoli'" :class="activeTab === 'tavoli'
+                ? 'border-b-2 border-gold text-gold font-medium'
+                : 'text-muted'" class="flex-1 pb-3 font-sans text-sm tracking-wide transition-colors">I Tavoli</button>
+        <button @click="activateGallery()" :class="activeTab === 'foto'
+                ? 'border-b-2 border-gold text-gold font-medium'
+                : 'text-muted'" class="flex-1 pb-3 font-sans text-sm tracking-wide transition-colors">Le Foto</button>
     </div>
 
-    <!-- Decorative divider -->
-    <div class="divider mb-6">
-        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
-                stroke="currentColor" stroke-width="1.4" />
-            <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-        </svg>
-    </div>
+    <!-- ── Tab 1: Tavoli ────────────────────────────────────────────────── -->
+    <div x-show="activeTab === 'tavoli'" x-transition>
 
-    <!-- Table grid -->
-    <div class="grid grid-cols-2 gap-4">
-        {% for table in tables %}
-        <a href="{{ url_for('table_page', table_id=table.id) }}?t={{ token }}"
-            class="group block rounded overflow-hidden border border-border bg-surface shadow-[0_1px_4px_rgba(0,0,0,0.07)] transition-transform duration-150 active:scale-[0.97]">
-            <!-- Cover image -->
-            <div class="aspect-[4/3] bg-sage-light overflow-hidden">
-                {% if table.cover %}
-                <img src="{{ url_for('static', path='media/' ~ table.cover) }}" alt="{{ table.name }}"
-                    class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                    loading="lazy" />
-                {% else %}
-                <!-- Placeholder if no cover -->
-                <div class="w-full h-full flex items-center justify-center">
-                    <svg width="32" height="32" viewBox="0 0 20 20" fill="none" class="text-sage opacity-40">
-                        <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
-                            stroke="currentColor" stroke-width="1.2" />
-                        <path d="M10 18V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-                    </svg>
+        <!-- Page header -->
+        <div class="text-center mb-6">
+            <h2 class="font-serif font-light italic text-3xl text-text leading-tight">I Tavoli</h2>
+            <p class="font-sans font-light text-muted text-sm mt-1 tracking-wide">
+                Sfoglia le foto del tuo tavolo
+            </p>
+        </div>
+
+        <!-- Decorative divider -->
+        <div class="divider mb-6">
+            <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                    stroke="currentColor" stroke-width="1.4" />
+                <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+        </div>
+
+        <!-- Table grid -->
+        <div class="grid grid-cols-2 gap-4">
+            {% for table in tables %}
+            <a href="{{ url_for('table_page', table_id=table.id) }}?t={{ token }}"
+                class="group block rounded overflow-hidden border border-border bg-surface shadow-[0_1px_4px_rgba(0,0,0,0.07)] transition-transform duration-150 active:scale-[0.97]">
+                <!-- Cover image -->
+                <div class="aspect-[4/3] bg-sage-light overflow-hidden">
+                    {% if table.cover %}
+                    <img src="{{ url_for('static', path='media/' ~ table.cover) }}" alt="{{ table.name }}"
+                        class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy" />
+                    {% else %}
+                    <!-- Placeholder if no cover -->
+                    <div class="w-full h-full flex items-center justify-center">
+                        <svg width="32" height="32" viewBox="0 0 20 20" fill="none" class="text-sage opacity-40">
+                            <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                                stroke="currentColor" stroke-width="1.2" />
+                            <path d="M10 18V8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+                        </svg>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
-            </div>
+                <!-- Table name -->
+                <div class="px-3 py-2.5">
+                    <p class="font-serif font-light text-[1.05rem] text-text leading-tight line-clamp-2">
+                        {{ table.name }}
+                    </p>
+                    {% if table.media %}
+                    <p class="font-sans font-light text-[0.7rem] text-muted mt-1 tracking-wide">
+                        {{ table.media | length }} foto
+                    </p>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
 
-            <!-- Table name -->
-            <div class="px-3 py-2.5">
-                <p class="font-serif font-light text-[1.05rem] text-text leading-tight line-clamp-2">
-                    {{ table.name }}
-                </p>
-                {% if table.media %}
-                <p class="font-sans font-light text-[0.7rem] text-muted mt-1 tracking-wide">
-                    {{ table.media | length }} foto{% if table.media | length != 1 %}{% endif %}
-                </p>
-                {% endif %}
+        {% if not tables %}
+        <div class="text-center py-16">
+            <p class="font-serif italic text-muted text-lg">Nessun tavolo ancora configurato.</p>
+        </div>
+        {% endif %}
+
+    </div><!-- /tab tavoli -->
+
+    <!-- ── Tab 2: Le Foto ───────────────────────────────────────────────── -->
+    <div x-show="activeTab === 'foto'" x-transition>
+
+        <!-- Gallery header -->
+        <div class="text-center mb-5">
+            <h2 class="font-serif font-light italic text-3xl text-text leading-tight">Le Foto</h2>
+            <p class="font-sans font-light text-muted text-sm mt-1 tracking-wide">
+                Condividi i tuoi momenti preferiti
+            </p>
+        </div>
+
+        <!-- Upload button (always visible) -->
+        <div class="flex justify-center mb-6">
+            <button @click="openDialog()"
+                class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gold text-white font-sans text-sm font-medium shadow-sm active:scale-[0.97] transition-transform">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                    stroke="currentColor" class="w-4 h-4">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                </svg>
+                Carica una foto
+            </button>
+        </div>
+
+        <!-- Loading state -->
+        <div x-show="galleryLoading" class="flex justify-center py-12">
+            <svg class="animate-spin w-6 h-6 text-gold" xmlns="http://www.w3.org/2000/svg" fill="none"
+                viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+        </div>
+
+        <!-- Gallery grid -->
+        <div x-show="!galleryLoading" class="grid grid-cols-3 gap-1.5">
+            <template x-for="item in gallery" :key="item.id">
+                <div @click="openLightbox(item)"
+                    class="relative aspect-square bg-sage-light rounded overflow-hidden cursor-pointer active:scale-[0.97] transition-transform">
+                    <!-- Image thumbnail -->
+                    <template x-if="item.mime_type.startsWith('image/')">
+                        <img :src="item.media_url" :alt="item.guest_name" class="w-full h-full object-cover"
+                            loading="lazy" />
+                    </template>
+                    <!-- Video thumbnail placeholder -->
+                    <template x-if="item.mime_type.startsWith('video/')">
+                        <div class="w-full h-full flex items-center justify-center bg-text/10">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"
+                                class="w-8 h-8 text-muted">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                        </div>
+                    </template>
+                    <!-- Guest name overlay -->
+                    <div
+                        class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-1.5 py-1">
+                        <p class="text-white font-sans text-[0.6rem] truncate" x-text="item.guest_name"></p>
+                    </div>
+                </div>
+            </template>
+
+            <!-- Empty state -->
+            <div x-show="gallery.length === 0 && !galleryLoading" class="col-span-3 text-center py-16">
+                <p class="font-serif italic text-muted">Ancora nessuna foto. Sii il primo!</p>
             </div>
-        </a>
-        {% endfor %}
+        </div>
+
+    </div><!-- /tab foto -->
+
+    <!-- ── Lightbox ─────────────────────────────────────────────────────── -->
+    <div x-show="lightboxItem !== null" x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0" @click.self="lightboxItem = null"
+        class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" style="display: none;">
+        <button @click="lightboxItem = null" class="absolute top-4 right-4 text-white/70 hover:text-white"
+            aria-label="Chiudi">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                stroke="currentColor" class="w-7 h-7">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+        <template x-if="lightboxItem && lightboxItem.mime_type.startsWith('image/')">
+            <img :src="lightboxItem.media_url" class="max-w-full max-h-full object-contain rounded" />
+        </template>
+        <template x-if="lightboxItem && lightboxItem.mime_type.startsWith('video/')">
+            <video :src="lightboxItem.media_url" controls autoplay class="max-w-full max-h-full rounded"></video>
+        </template>
     </div>
 
-    {% if not tables %}
-    <div class="text-center py-16">
-        <p class="font-serif italic text-muted text-lg">Nessun tavolo ancora configurato.</p>
-    </div>
-    {% endif %}
+    <!-- ── Upload dialog ────────────────────────────────────────────────── -->
+    <div x-show="dialogOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="closeDialog()"
+        class="fixed inset-0 z-40 bg-black/60 flex items-end sm:items-center justify-center" style="display: none;">
+        <div class="w-full max-w-[440px] bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl p-6 pb-safe" @click.stop>
 
-</div>
+            <!-- Dialog header -->
+            <div class="flex items-center justify-between mb-5">
+                <h3 class="font-serif italic text-xl text-text">Carica una foto</h3>
+                <button @click="closeDialog()" class="text-muted hover:text-text">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                        stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Step 1: Identity -->
+            <div x-show="dialogStep === 'identity'">
+                <p class="font-sans text-sm text-muted mb-4">Inserisci il tuo nome per continuare.</p>
+                <div class="space-y-3">
+                    <input x-model="guestName" type="text" placeholder="Nome" autocomplete="given-name"
+                        class="w-full border border-border rounded-lg px-4 py-3 font-sans text-sm text-text bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40" />
+                    <input x-model="guestSurname" type="text" placeholder="Cognome" autocomplete="family-name"
+                        class="w-full border border-border rounded-lg px-4 py-3 font-sans text-sm text-text bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40" />
+                </div>
+                <p x-show="identityError" x-text="identityError" class="mt-2 text-sm text-red-600 font-sans"></p>
+                <button @click="validateIdentity()" :disabled="identityLoading"
+                    class="mt-5 w-full py-3 rounded-full bg-gold text-white font-sans text-sm font-medium disabled:opacity-60 active:scale-[0.98] transition-transform">
+                    <span x-show="!identityLoading">Continua</span>
+                    <span x-show="identityLoading">Verifica in corso…</span>
+                </button>
+            </div>
+
+            <!-- Step 2: File picker -->
+            <div x-show="dialogStep === 'file'">
+                <p class="font-sans text-sm text-muted mb-4">
+                    Seleziona le foto o i video da caricare (max 50 MB ciascuno).
+                </p>
+                <label
+                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-gold/60 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-8 h-8 text-muted mb-2">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                    </svg>
+                    <span class="font-sans text-sm text-muted">Tocca per scegliere i file</span>
+                    <input type="file" multiple accept="image/*,video/*" class="hidden"
+                        @change="onFilesSelected($event)" />
+                </label>
+
+                <!-- Selected files list -->
+                <ul x-show="selectedFiles.length > 0" class="mt-3 space-y-2">
+                    <template x-for="(f, i) in selectedFiles" :key="i">
+                        <li class="flex items-center justify-between font-sans text-xs text-text">
+                            <span class="truncate max-w-[200px]" x-text="f.name"></span>
+                            <span class="text-muted ml-2" x-text="formatSize(f.size)"></span>
+                        </li>
+                    </template>
+                </ul>
+
+                <p x-show="fileError" x-text="fileError" class="mt-2 text-sm text-red-600 font-sans"></p>
+
+                <button @click="startUpload()" :disabled="selectedFiles.length === 0 || uploading"
+                    class="mt-5 w-full py-3 rounded-full bg-gold text-white font-sans text-sm font-medium disabled:opacity-60 active:scale-[0.98] transition-transform">
+                    Carica
+                </button>
+            </div>
+
+            <!-- Step 3: Uploading -->
+            <div x-show="dialogStep === 'uploading'" class="py-4">
+                <template x-for="(prog, i) in uploadProgress" :key="i">
+                    <div class="mb-4">
+                        <div class="flex justify-between font-sans text-xs text-muted mb-1">
+                            <span class="truncate max-w-[240px]" x-text="prog.name"></span>
+                            <span x-text="prog.percent + '%'"></span>
+                        </div>
+                        <div class="w-full h-1.5 bg-border rounded-full overflow-hidden">
+                            <div class="h-full bg-gold rounded-full transition-all duration-200"
+                                :style="'width:' + prog.percent + '%'"></div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- Step 4: Done -->
+            <div x-show="dialogStep === 'done'" class="text-center py-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-12 h-12 text-gold mx-auto mb-3">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="font-serif italic text-xl text-text">Grazie!</p>
+                <p class="font-sans text-sm text-muted mt-1">Le tue foto sono state caricate con successo.</p>
+                <button @click="closeDialog()"
+                    class="mt-5 px-6 py-2.5 rounded-full border border-border font-sans text-sm text-text active:scale-[0.97] transition-transform">Chiudi</button>
+            </div>
+
+        </div>
+    </div><!-- /upload dialog -->
+
+</div><!-- /x-data -->
+{% endblock %}
+
+{% block head_extra %}
+<script>
+    function weddingApp(token) {
+        return {
+            token: token,
+            activeTab: 'tavoli',
+
+            // Gallery
+            gallery: [],
+            galleryLoading: false,
+            lightboxItem: null,
+
+            // Dialog
+            dialogOpen: false,
+            dialogStep: 'identity',   // 'identity' | 'file' | 'uploading' | 'done'
+
+            // Identity step
+            guestName: '',
+            guestSurname: '',
+            identityError: '',
+            identityLoading: false,
+
+            // File step
+            selectedFiles: [],
+            fileError: '',
+            uploading: false,
+            uploadProgress: [],
+
+            // ── Init ────────────────────────────────────────────────────────
+            init() {
+                this.guestName = localStorage.getItem('wedding_guest_name') || '';
+                this.guestSurname = localStorage.getItem('wedding_guest_surname') || '';
+            },
+
+            // ── Tab helpers ─────────────────────────────────────────────────
+            activateGallery() {
+                this.activeTab = 'foto';
+                this.loadGallery();
+            },
+
+            // ── Gallery ─────────────────────────────────────────────────────
+            async loadGallery() {
+                this.galleryLoading = true;
+                try {
+                    const res = await fetch(`/api/uploads?t=${encodeURIComponent(this.token)}`);
+                    if (res.ok) {
+                        this.gallery = await res.json();
+                    }
+                } catch (e) {
+                    console.error('Gallery load error', e);
+                } finally {
+                    this.galleryLoading = false;
+                }
+            },
+
+            openLightbox(item) {
+                this.lightboxItem = item;
+            },
+
+            // ── Upload dialog ───────────────────────────────────────────────
+            openDialog() {
+                this.identityError = '';
+                this.fileError = '';
+                this.selectedFiles = [];
+                this.uploadProgress = [];
+                this.uploading = false;
+
+                const savedName = localStorage.getItem('wedding_guest_name');
+                const savedSurname = localStorage.getItem('wedding_guest_surname');
+                if (savedName && savedSurname) {
+                    this.guestName = savedName;
+                    this.guestSurname = savedSurname;
+                    this.dialogStep = 'file';
+                } else {
+                    this.dialogStep = 'identity';
+                }
+                this.dialogOpen = true;
+            },
+
+            closeDialog() {
+                this.dialogOpen = false;
+                if (this.dialogStep === 'done') {
+                    this.loadGallery();
+                }
+            },
+
+            // ── Step 1: validate identity ───────────────────────────────────
+            async validateIdentity() {
+                this.identityError = '';
+                if (!this.guestName.trim() || !this.guestSurname.trim()) {
+                    this.identityError = 'Inserisci nome e cognome.';
+                    return;
+                }
+                this.identityLoading = true;
+                try {
+                    const res = await fetch(`/api/guests/validate?t=${encodeURIComponent(this.token)}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name: this.guestName.trim(), surname: this.guestSurname.trim() }),
+                    });
+                    if (res.ok) {
+                        localStorage.setItem('wedding_guest_name', this.guestName.trim());
+                        localStorage.setItem('wedding_guest_surname', this.guestSurname.trim());
+                        this.dialogStep = 'file';
+                    } else {
+                        const data = await res.json().catch(() => ({}));
+                        this.identityError = data.detail || 'Nome o cognome non trovati nella lista degli invitati.';
+                    }
+                } catch (e) {
+                    this.identityError = 'Errore di rete. Riprova.';
+                } finally {
+                    this.identityLoading = false;
+                }
+            },
+
+            // ── Step 2: file selection ──────────────────────────────────────
+            onFilesSelected(event) {
+                this.fileError = '';
+                const all = Array.from(event.target.files || []);
+                const tooBig = all.filter(f => f.size > 50 * 1024 * 1024);
+                if (tooBig.length > 0) {
+                    this.fileError = `File troppo grandi (max 50 MB): ${tooBig.map(f => f.name).join(', ')}`;
+                }
+                this.selectedFiles = all.filter(f => f.size <= 50 * 1024 * 1024);
+            },
+
+            formatSize(bytes) {
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            },
+
+            // ── Step 3: upload ──────────────────────────────────────────────
+            async startUpload() {
+                if (this.selectedFiles.length === 0 || this.uploading) return;
+                this.fileError = '';
+                this.uploading = true;
+                this.dialogStep = 'uploading';
+                this.uploadProgress = this.selectedFiles.map(f => ({ name: f.name, percent: 0 }));
+
+                let allOk = true;
+                for (let i = 0; i < this.selectedFiles.length; i++) {
+                    const ok = await this._uploadOne(this.selectedFiles[i], i);
+                    if (!ok) allOk = false;
+                }
+
+                this.uploading = false;
+                if (allOk) {
+                    this.dialogStep = 'done';
+                } else {
+                    this.dialogStep = 'file';
+                    this.fileError = 'Alcuni file non sono stati caricati. Riprova.';
+                }
+            },
+
+            _uploadOne(file, index) {
+                return new Promise((resolve) => {
+                    const formData = new FormData();
+                    formData.append('name', this.guestName.trim());
+                    formData.append('surname', this.guestSurname.trim());
+                    formData.append('file', file);
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', `/api/uploads?t=${encodeURIComponent(this.token)}`);
+
+                    xhr.upload.addEventListener('progress', (e) => {
+                        if (e.lengthComputable) {
+                            this.uploadProgress[index] = {
+                                name: file.name,
+                                percent: Math.round((e.loaded / e.total) * 100),
+                            };
+                        }
+                    });
+
+                    xhr.addEventListener('load', () => {
+                        this.uploadProgress[index] = { name: file.name, percent: 100 };
+                        resolve(xhr.status >= 200 && xhr.status < 300);
+                    });
+
+                    xhr.addEventListener('error', () => resolve(false));
+                    xhr.send(formData);
+                });
+            },
+        };
+    }
+</script>
 {% endblock %}
