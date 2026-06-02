@@ -11,10 +11,13 @@ Endpoints:
 
 from __future__ import annotations
 
+import asyncio
+import io
 import uuid
 from typing import Annotated
 
 import magic
+from PIL import Image
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -30,6 +33,52 @@ router = APIRouter(prefix="/api")
 _MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
 _ALLOWED_MIME_PREFIXES = ("image/", "video/")
+
+# Maximum long edge after resizing (pixels). Images larger than this are scaled
+# down proportionally before compression. Set to 0 to disable resizing.
+_MAX_DIMENSION = 2048
+
+# JPEG/WebP compression quality (1–95). 82 gives ~70–80 % size reduction
+# on typical smartphone photos with barely perceptible quality loss.
+_JPEG_QUALITY = 82
+
+
+def _compress_image(data: bytes, mime_type: str) -> tuple[bytes, str]:
+    """Re-encode an image with Pillow to reduce file size.
+
+    HEIC files are decoded by Pillow if pillow-heif is installed; otherwise
+    they are left as-is.  All other recognised formats are re-encoded as JPEG
+    (or kept as PNG when the source has transparency).  Videos are not touched.
+    Returns the (possibly compressed) bytes and the resulting MIME type.
+    """
+    try:
+        img = Image.open(io.BytesIO(data))
+    except Exception:
+        # If Pillow can't open it, return the original untouched.
+        return data, mime_type
+
+    # Resize if either dimension exceeds the limit
+    if _MAX_DIMENSION > 0 and max(img.size) > _MAX_DIMENSION:
+        img.thumbnail((_MAX_DIMENSION, _MAX_DIMENSION), Image.Resampling.LANCZOS)
+
+    # Choose output format
+    has_alpha = img.mode in ("RGBA", "LA", "PA") or (
+        img.mode == "P" and "transparency" in img.info
+    )
+    if has_alpha:
+        out_format = "PNG"
+        out_mime = "image/png"
+        save_kwargs: dict = {"optimize": True}
+    else:
+        out_format = "JPEG"
+        out_mime = "image/jpeg"
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+        save_kwargs = {"quality": _JPEG_QUALITY, "optimize": True, "progressive": True}
+
+    buf = io.BytesIO()
+    img.save(buf, format=out_format, **save_kwargs)
+    return buf.getvalue(), out_mime
 
 
 # ---------------------------------------------------------------------------
@@ -133,11 +182,22 @@ async def create_upload(
             detail=f"Tipo di file non supportato: {detected_mime}.",
         )
 
-    # Derive file extension from original filename
+    # Compress images in a thread pool to avoid blocking the event loop
+    if detected_mime.startswith("image/"):
+        loop = asyncio.get_event_loop()
+        data, detected_mime = await loop.run_in_executor(
+            None, _compress_image, data, detected_mime
+        )
+
+    # Derive extension from the (possibly updated) MIME type
     original_filename = file.filename or "upload"
-    suffix = ""
-    if "." in original_filename:
+    _mime_to_ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
+    if detected_mime.startswith("image/"):
+        suffix = _mime_to_ext.get(detected_mime, ".jpg")
+    elif "." in original_filename:
         suffix = "." + original_filename.rsplit(".", 1)[-1].lower()
+    else:
+        suffix = ""
 
     s3_key = f"uploads/{uuid.uuid4()}{suffix}"
 
