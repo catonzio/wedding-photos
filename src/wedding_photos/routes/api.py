@@ -17,7 +17,7 @@ import uuid
 from typing import Annotated
 
 import magic
-from PIL import Image
+from PIL import Image, ImageOps
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -53,6 +53,7 @@ def _compress_image(data: bytes, mime_type: str) -> tuple[bytes, str]:
     """
     try:
         img = Image.open(io.BytesIO(data))
+        img = ImageOps.exif_transpose(img)
     except Exception:
         # If Pillow can't open it, return the original untouched.
         return data, mime_type

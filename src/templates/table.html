@@ -62,11 +62,11 @@
 
     /* ── lightbox items (images only, built from server data) ── */
     lbItems: [
-        {% set img_i = namespace(v=0) %}
         {% for item in table.media %}
-        {% if not (item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm')) %}
-        { src: '{{ url_for('static', path='media/' ~ item) }}', alt: 'Foto {{ loop.index }} \u2014 {{ table.name }}' },
-        {% set img_i.v = img_i.v + 1 %}
+        {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
+        { src: '{{ url_for('static', path='media/' ~ item) }}', type: 'video', alt: '' },
+        {% else %}
+        { src: '{{ url_for('static', path='media/' ~ item) }}', type: 'image', alt: 'Foto {{ loop.index }} \u2014 {{ table.name }}' },
         {% endif %}
         {% endfor %}
     ],
@@ -81,6 +81,7 @@
         _ox: 0,   _oy: 0,
         _pd: 0,   _ps: 1,
         _sx: 0,   _sy: 0,   /* swipe start */
+        _lastTap: 0,
         scrollY:  0
     },
 
@@ -123,6 +124,7 @@
         if (this.lb.scale <= 1) { this.lb.tx = 0; this.lb.ty = 0; }
     },
     onWheel(e) {
+        if (this.lbItems[this.lb.idx]?.type === 'video') return;
         e.preventDefault();
         const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
         this.lb.scale = Math.max(1, Math.min(8, this.lb.scale * f));
@@ -145,7 +147,8 @@
 
     /* touch: pan when zoomed, swipe to navigate when at 1× */
     touchStart(e) {
-        if (e.touches.length === 2) {
+        const isVideo = this.lbItems[this.lb.idx]?.type === 'video';
+        if (e.touches.length === 2 && !isVideo) {
             this.lb._pd = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
                 e.touches[0].clientY - e.touches[1].clientY
@@ -154,7 +157,7 @@
         } else if (e.touches.length === 1) {
             this.lb._sx = e.touches[0].clientX;
             this.lb._sy = e.touches[0].clientY;
-            if (this.lb.scale > 1) {
+            if (this.lb.scale > 1 && !isVideo) {
                 this.lb.dragging = true;
                 this.lb._ox = e.touches[0].clientX - this.lb.tx;
                 this.lb._oy = e.touches[0].clientY - this.lb.ty;
@@ -162,7 +165,9 @@
         }
     },
     touchMove(e) {
-        e.preventDefault();
+        const isVideo = this.lbItems[this.lb.idx]?.type === 'video';
+        if (!isVideo) e.preventDefault();
+        if (isVideo) return;
         if (e.touches.length === 2) {
             const d = Math.hypot(
                 e.touches[0].clientX - e.touches[1].clientX,
@@ -177,11 +182,25 @@
     },
     touchEnd(e) {
         this.lb.dragging = false;
-        if (this.lb.scale <= 1 && e.changedTouches.length === 1) {
+        if (e.changedTouches.length === 1) {
             const dx = e.changedTouches[0].clientX - this.lb._sx;
             const dy = e.changedTouches[0].clientY - this.lb._sy;
-            if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-                dx < 0 ? this.lbNext() : this.lbPrev();
+            const now = Date.now();
+            const isQuick = Math.abs(dx) < 15 && Math.abs(dy) < 15;
+            if (isQuick && now - this.lb._lastTap < 300) {
+                if (this.lbItems[this.lb.idx]?.type === 'image') {
+                    if (this.lb.scale > 1) {
+                        this.lb.scale = 1; this.lb.tx = 0; this.lb.ty = 0;
+                    } else {
+                        this.lb.scale = 2.5;
+                    }
+                }
+                this.lb._lastTap = 0;
+            } else {
+                if (isQuick) this.lb._lastTap = now;
+                if (this.lb.scale <= 1 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                    dx < 0 ? this.lbNext() : this.lbPrev();
+                }
             }
         }
     }
@@ -201,7 +220,6 @@
                on: { slideChange(s) { current = s.activeIndex + 1 } }
              })">
             <div class="swiper-wrapper">
-                {% set img_j = namespace(v=0) %}
                 {% for item in table.media %}
                 <div class="swiper-slide">
                     {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
@@ -210,8 +228,8 @@
                     {% else %}
                     <img src="{{ url_for('static', path='media/' ~ item) }}"
                         alt="Foto {{ loop.index }} — {{ table.name }}" class="w-full h-full object-cover cursor-zoom-in"
-                        loading="{% if loop.first %}eager{% else %}lazy{% endif %}" @click="openLb({{ img_j.v }})" />
-                    {% set img_j.v = img_j.v + 1 %}
+                        loading="{% if loop.first %}eager{% else %}lazy{% endif %}"
+                        @click="openLb({{ loop.index0 }})" />
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -282,24 +300,42 @@
             x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
             class="fixed inset-0 z-[9999] flex items-center justify-center"
             style="background:rgba(12,10,8,0.93);backdrop-filter:blur(12px);" @click.self="closeLb()"
-            @wheel.prevent="onWheel($event)" @mousemove="dragMove($event)" @mouseup="dragEnd()" @mouseleave="dragEnd()"
-            @touchstart.passive="touchStart($event)" @touchmove.prevent="touchMove($event)"
-            @touchend="touchEnd($event)">
+            @wheel="onWheel($event)" @mousemove="dragMove($event)" @mouseup="dragEnd()" @mouseleave="dragEnd()"
+            @touchstart.passive="touchStart($event)" @touchmove="touchMove($event)" @touchend="touchEnd($event)">
 
-            <!-- Image — centred, constrained to viewport -->
-            <img :src="lbItems[lb.idx]?.src" :alt="lbItems[lb.idx]?.alt" :style="`
-                    display: block;
-                    max-width: 100vw;
-                    max-height: 100dvh;
-                    object-fit: contain;
-                    cursor: ${lb.scale > 1 ? (lb.dragging ? 'grabbing' : 'grab') : 'zoom-out'};
-                    transform: translate(${lb.tx}px, ${lb.ty}px) scale(${lb.scale});
-                    transform-origin: center center;
-                    transition: ${lb.dragging ? 'none' : 'transform 0.15s ease'};
-                    will-change: transform;
-                    user-select: none;
-                    -webkit-user-drag: none;
-                `" @mousedown.prevent="dragStart($event)" draggable="false" />
+            <!-- Image slide -->
+            <template x-if="lbItems[lb.idx]?.type === 'image'">
+                <img :src="lbItems[lb.idx]?.src" :alt="lbItems[lb.idx]?.alt" :style="`
+                        display: block;
+                        max-width: 100vw;
+                        max-height: 100dvh;
+                        object-fit: contain;
+                        cursor: ${lb.scale > 1 ? (lb.dragging ? 'grabbing' : 'grab') : 'zoom-out'};
+                        transform: translate(${lb.tx}px, ${lb.ty}px) scale(${lb.scale});
+                        transform-origin: center center;
+                        transition: ${lb.dragging ? 'none' : 'transform 0.15s ease'};
+                        will-change: transform;
+                        user-select: none;
+                        -webkit-user-drag: none;
+                    `" @mousedown.prevent="dragStart($event)" draggable="false" />
+            </template>
+
+            <!-- Video slide -->
+            <template x-if="lbItems[lb.idx]?.type === 'video'">
+                <video :src="lbItems[lb.idx]?.src" controls autoplay playsinline
+                    style="max-width:100vw;max-height:90dvh;" class="rounded"></video>
+            </template>
+
+            <!-- Download -->
+            <a :href="lbItems[lb.idx]?.src" :download="lbItems[lb.idx]?.alt || 'media'" aria-label="Scarica"
+                style="position:absolute;top:1rem;left:1rem;"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+            </a>
 
             <!-- Close -->
             <button @click="closeLb()" aria-label="Chiudi" style="position:absolute;top:1rem;right:1rem;"
@@ -334,7 +370,7 @@
             <div style="position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);"
                 class="flex items-center gap-3">
                 <!-- zoom out -->
-                <button @click="zoomOut()" aria-label="Zoom out"
+                <button @click="zoomOut()" aria-label="Zoom out" x-show="lbItems[lb.idx]?.type === 'image'"
                     class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor" class="w-5 h-5">
@@ -347,7 +383,7 @@
                     x-text="`${lb.idx + 1} / ${lbItems.length}`"></span>
 
                 <!-- zoom in -->
-                <button @click="zoomIn()" aria-label="Zoom in"
+                <button @click="zoomIn()" aria-label="Zoom in" x-show="lbItems[lb.idx]?.type === 'image'"
                     class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
                         stroke="currentColor" class="w-5 h-5">

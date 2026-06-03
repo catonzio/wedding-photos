@@ -3,7 +3,9 @@
 {% block title %}Tavoli · Il Nostro Matrimonio{% endblock %}
 
 {% block content %}
-<div class="max-w-[480px] mx-auto px-5 py-6" x-data="weddingApp('{{ token }}')" @keydown.escape.window="closeDialog()">
+<div class="max-w-[480px] mx-auto px-5 py-6" x-data="weddingApp('{{ token }}')"
+    @keydown.escape.window="lb.open ? closeLightbox() : closeDialog()" @keydown.arrow-left.window="lb.open && lbPrev()"
+    @keydown.arrow-right.window="lb.open && lbNext()">
 
     <!-- ── Tab bar ─────────────────────────────────────────────────────── -->
     <div class="flex mb-6 border-b border-border">
@@ -148,128 +150,184 @@
     </div><!-- /tab foto -->
 
     <!-- ── Lightbox ─────────────────────────────────────────────────────── -->
-    <div x-show="lightboxItem !== null" x-transition:enter="transition ease-out duration-200"
-        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-        x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0" @click.self="lightboxItem = null"
-        class="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4" style="display: none;">
-        <button @click="lightboxItem = null" class="absolute top-4 right-4 text-white/70 hover:text-white"
-            aria-label="Chiudi">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                stroke="currentColor" class="w-7 h-7">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-        </button>
+    <template x-teleport="body">
+        <div x-show="lb.open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="closeLightbox()"
+            class="fixed inset-0 z-50 flex items-center justify-center"
+            style="background:rgba(12,10,8,0.93);backdrop-filter:blur(12px);display:none;" @wheel="onLbWheel($event)"
+            @mousemove="lbDragMove($event)" @mouseup="lbDragEnd()" @mouseleave="lbDragEnd()"
+            @touchstart.passive="lbTouchStart($event)" @touchmove="lbTouchMove($event)" @touchend="lbTouchEnd($event)">
 
-        <template x-if="lightboxItem && lightboxItem.mime_type.startsWith('image/')">
-            <img :src="lightboxItem.media_url" class="max-w-full max-h-full object-contain rounded" />
-        </template>
-        <template x-if="lightboxItem && lightboxItem.mime_type.startsWith('video/')">
-            <video :src="lightboxItem.media_url" controls autoplay class="max-w-full max-h-full rounded"></video>
-        </template>
-    </div>
+            <!-- Image slide -->
+            <template x-if="lbItems[lb.idx]?.type === 'image'">
+                <img :src="lbItems[lb.idx]?.src" :alt="lbItems[lb.idx]?.alt" :style="`
+                display: block;
+                max-width: 100vw;
+                max-height: 100dvh;
+                object-fit: contain;
+                cursor: ${lb.scale > 1 ? (lb.dragging ? 'grabbing' : 'grab') : 'zoom-out'};
+                transform: translate(${lb.tx}px, ${lb.ty}px) scale(${lb.scale});
+                transform-origin: center center;
+                transition: ${lb.dragging ? 'none' : 'transform 0.15s ease'};
+                will-change: transform;
+                user-select: none;
+                -webkit-user-drag: none;
+            `" @mousedown.prevent="lbDragStart($event)" draggable="false" />
+            </template>
+
+            <!-- Video slide -->
+            <template x-if="lbItems[lb.idx]?.type === 'video'">
+                <video :src="lbItems[lb.idx]?.src" controls autoplay playsinline
+                    style="max-width:100vw;max-height:90dvh;" class="rounded"></video>
+            </template>
+
+            <!-- Download -->
+            <a :href="lbItems[lb.idx]?.src" :download="lbItems[lb.idx]?.alt || 'media'" aria-label="Scarica"
+                style="position:absolute;top:1rem;left:1rem;"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+            </a>
+
+            <!-- Close -->
+            <button @click="closeLightbox()" aria-label="Chiudi" style="position:absolute;top:1rem;right:1rem;"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Prev -->
+            <button @click="lbPrev()" aria-label="Precedente" x-show="lbItems.length > 1"
+                style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                </svg>
+            </button>
+
+            <!-- Next -->
+            <button @click="lbNext()" aria-label="Successiva" x-show="lbItems.length > 1"
+                style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);"
+                class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                    stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                </svg>
+            </button>
+
+            <!-- Counter -->
+            <div style="position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);">
+                <span class="text-white/60 font-sans text-xs tabular-nums"
+                    x-text="`${lb.idx + 1} / ${lbItems.length}`"></span>
+            </div>
+        </div>
+    </template>
 
     <!-- ── Upload dialog ────────────────────────────────────────────────── -->
-    <div x-show="dialogOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
-        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
-        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="closeDialog()"
-        class="fixed inset-0 z-40 bg-black/60 flex items-end sm:items-center justify-center" style="display: none;">
-        <div class="w-full max-w-[440px] bg-surface rounded-t-2xl sm:rounded-2xl shadow-xl p-6 pb-safe" @click.stop>
+    <template x-teleport="body">
+        <div x-show="dialogOpen" x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0" @click.self="closeDialog()"
+            class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center" style="display: none;">
+            <div class="w-full max-w-[440px] bg-surface rounded-2xl shadow-xl p-6 pb-safe mx-4" @click.stop>
 
-            <!-- Dialog header -->
-            <div class="flex items-center justify-between mb-5">
-                <h3 class="font-serif italic text-xl text-text">Carica una foto</h3>
-                <button @click="closeDialog()" class="text-muted hover:text-text">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
-                        stroke="currentColor" class="w-5 h-5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-
-            <!-- Step 1: Identity -->
-            <div x-show="dialogStep === 'identity'">
-                <p class="font-sans text-sm text-muted mb-4">Inserisci il tuo nome per continuare.</p>
-                <div class="space-y-3">
-                    <input x-model="guestName" type="text" placeholder="Nome" autocomplete="given-name"
-                        class="w-full border border-border rounded-lg px-4 py-3 font-sans text-sm text-text bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40" />
-                    <input x-model="guestSurname" type="text" placeholder="Cognome" autocomplete="family-name"
-                        class="w-full border border-border rounded-lg px-4 py-3 font-sans text-sm text-text bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40" />
+                <!-- Dialog header -->
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="font-serif italic text-xl text-text">Carica una foto</h3>
+                    <button @click="closeDialog()" class="text-muted hover:text-text">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                            stroke="currentColor" class="w-5 h-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
-                <p x-show="identityError" x-text="identityError" class="mt-2 text-sm text-red-600 font-sans"></p>
-                <button @click="validateIdentity()" :disabled="identityLoading"
-                    class="mt-5 w-full py-3 rounded-full bg-gold text-white font-sans text-sm font-medium disabled:opacity-60 active:scale-[0.98] transition-transform">
-                    <span x-show="!identityLoading">Continua</span>
-                    <span x-show="identityLoading">Verifica in corso…</span>
-                </button>
-            </div>
 
-            <!-- Step 2: File picker -->
-            <div x-show="dialogStep === 'file'">
-                <p class="font-sans text-sm text-muted mb-4">
-                    Seleziona le foto o i video da caricare (max 50 MB ciascuno).
-                </p>
-                <label
-                    class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-gold/60 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-8 h-8 text-muted mb-2">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-                    </svg>
-                    <span class="font-sans text-sm text-muted">Tocca per scegliere i file</span>
-                    <input type="file" multiple accept="image/*,video/*" class="hidden"
-                        @change="onFilesSelected($event)" />
-                </label>
-
-                <!-- Selected files list -->
-                <ul x-show="selectedFiles.length > 0" class="mt-3 space-y-2">
-                    <template x-for="(f, i) in selectedFiles" :key="i">
-                        <li class="flex items-center justify-between font-sans text-xs text-text">
-                            <span class="truncate max-w-[200px]" x-text="f.name"></span>
-                            <span class="text-muted ml-2" x-text="formatSize(f.size)"></span>
-                        </li>
-                    </template>
-                </ul>
-
-                <p x-show="fileError" x-text="fileError" class="mt-2 text-sm text-red-600 font-sans"></p>
-
-                <button @click="startUpload()" :disabled="selectedFiles.length === 0 || uploading"
-                    class="mt-5 w-full py-3 rounded-full bg-gold text-white font-sans text-sm font-medium disabled:opacity-60 active:scale-[0.98] transition-transform">
-                    Carica
-                </button>
-            </div>
-
-            <!-- Step 3: Uploading -->
-            <div x-show="dialogStep === 'uploading'" class="py-4">
-                <template x-for="(prog, i) in uploadProgress" :key="i">
-                    <div class="mb-4">
-                        <div class="flex justify-between font-sans text-xs text-muted mb-1">
-                            <span class="truncate max-w-[240px]" x-text="prog.name"></span>
-                            <span x-text="prog.percent + '%'"></span>
-                        </div>
-                        <div class="w-full h-1.5 bg-border rounded-full overflow-hidden">
-                            <div class="h-full bg-gold rounded-full transition-all duration-200"
-                                :style="'width:' + prog.percent + '%'"></div>
-                        </div>
+                <!-- Step 1: Identity -->
+                <div x-show="dialogStep === 'identity'">
+                    <p class="font-sans text-sm text-muted mb-4">Inserisci il tuo nome per continuare.</p>
+                    <div class="space-y-3">
+                        <input x-model="guestName" type="text" placeholder="Nome" autocomplete="given-name"
+                            class="w-full border border-border rounded-lg px-4 py-3 font-sans text-sm text-text bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40" />
+                        <input x-model="guestSurname" type="text" placeholder="Cognome" autocomplete="family-name"
+                            class="w-full border border-border rounded-lg px-4 py-3 font-sans text-sm text-text bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40" />
                     </div>
-                </template>
-            </div>
+                    <p x-show="identityError" x-text="identityError" class="mt-2 text-sm text-red-600 font-sans"></p>
+                    <button @click="validateIdentity()" :disabled="identityLoading"
+                        class="mt-5 w-full py-3 rounded-full bg-gold text-white font-sans text-sm font-medium disabled:opacity-60 active:scale-[0.98] transition-transform">
+                        <span x-show="!identityLoading">Continua</span>
+                        <span x-show="identityLoading">Verifica in corso…</span>
+                    </button>
+                </div>
 
-            <!-- Step 4: Done -->
-            <div x-show="dialogStep === 'done'" class="text-center py-6">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                    stroke="currentColor" class="w-12 h-12 text-gold mx-auto mb-3">
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                        d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <p class="font-serif italic text-xl text-text">Grazie!</p>
-                <p class="font-sans text-sm text-muted mt-1">Le tue foto sono state caricate con successo.</p>
-                <button @click="closeDialog()"
-                    class="mt-5 px-6 py-2.5 rounded-full border border-border font-sans text-sm text-text active:scale-[0.97] transition-transform">Chiudi</button>
-            </div>
+                <!-- Step 2: File picker -->
+                <div x-show="dialogStep === 'file'">
+                    <p class="font-sans text-sm text-muted mb-4">
+                        Seleziona le foto o i video da caricare (max 50 MB ciascuno).
+                    </p>
+                    <label
+                        class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-gold/60 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="w-8 h-8 text-muted mb-2">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+                        </svg>
+                        <span class="font-sans text-sm text-muted">Tocca per scegliere i file</span>
+                        <input type="file" multiple accept="image/*,video/*" class="hidden"
+                            @change="onFilesSelected($event)" />
+                    </label>
 
-        </div>
-    </div><!-- /upload dialog -->
+                    <!-- Selected files summary -->
+                    <div x-show="selectedFiles.length > 0"
+                        class="mt-3 flex items-center justify-between font-sans text-sm text-text">
+                        <span x-text="selectedFiles.length + ' file selezionati'"></span>
+                        <span class="text-muted"
+                            x-text="formatSize(selectedFiles.reduce((s, f) => s + f.size, 0))"></span>
+                    </div>
+
+                    <p x-show="fileError" x-text="fileError" class="mt-2 text-sm text-red-600 font-sans"></p>
+
+                    <button @click="startUpload()" :disabled="selectedFiles.length === 0 || uploading"
+                        class="mt-5 w-full py-3 rounded-full bg-gold text-white font-sans text-sm font-medium disabled:opacity-60 active:scale-[0.98] transition-transform">
+                        Carica
+                    </button>
+                </div>
+
+                <!-- Step 3: Uploading -->
+                <div x-show="dialogStep === 'uploading'" class="py-6">
+                    <div class="flex justify-between font-sans text-sm text-muted mb-3">
+                        <span x-text="`Caricamento ${uploadDone} di ${uploadTotal}\u2026`"></span>
+                        <span x-text="totalPercent + '%'"></span>
+                    </div>
+                    <div class="w-full h-2 bg-border rounded-full overflow-hidden">
+                        <div class="h-full bg-gold rounded-full transition-all duration-200"
+                            :style="'width:' + totalPercent + '%'"></div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Done -->
+                <div x-show="dialogStep === 'done'" class="text-center py-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                        stroke="currentColor" class="w-12 h-12 text-gold mx-auto mb-3">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p class="font-serif italic text-xl text-text">Grazie!</p>
+                    <p class="font-sans text-sm text-muted mt-1">Le tue foto sono state caricate con successo.</p>
+                    <button @click="closeDialog()"
+                        class="mt-5 px-6 py-2.5 rounded-full border border-border font-sans text-sm text-text active:scale-[0.97] transition-transform">Chiudi</button>
+                </div>
+
+            </div>
+        </div><!-- /upload dialog -->
+    </template>
 
 </div><!-- /x-data -->
 {% endblock %}
@@ -284,7 +342,19 @@
             // Gallery
             gallery: [],
             galleryLoading: false,
-            lightboxItem: null,
+
+            // Lightbox
+            lbItems: [],
+            lb: {
+                open: false, idx: 0,
+                scale: 1, tx: 0, ty: 0,
+                dragging: false,
+                _ox: 0, _oy: 0,
+                _pd: 0, _ps: 1,
+                _sx: 0, _sy: 0,
+                _lastTap: 0,
+                scrollY: 0,
+            },
 
             // Dialog
             dialogOpen: false,
@@ -301,6 +371,9 @@
             fileError: '',
             uploading: false,
             uploadProgress: [],
+            uploadDone: 0,
+            uploadTotal: 0,
+            totalPercent: 0,
 
             // ── Init ────────────────────────────────────────────────────────
             init() {
@@ -330,7 +403,113 @@
             },
 
             openLightbox(item) {
-                this.lightboxItem = item;
+                const idx = this.gallery.indexOf(item);
+                this.lbItems = this.gallery.map(g => ({
+                    src: g.media_url,
+                    type: g.mime_type.startsWith('video/') ? 'video' : 'image',
+                    alt: g.guest_name,
+                }));
+                this.lb.idx = idx >= 0 ? idx : 0;
+                this.lb.scale = 1; this.lb.tx = 0; this.lb.ty = 0;
+                this.lb.open = true;
+                this.lb.scrollY = window.scrollY;
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${this.lb.scrollY}px`;
+                document.body.style.overflow = 'hidden';
+                document.body.style.width = '100%';
+            },
+            closeLightbox() {
+                this.lb.open = false;
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.overflow = '';
+                document.body.style.width = '';
+                window.scrollTo(0, this.lb.scrollY);
+            },
+            lbNext() {
+                this.lb.idx = (this.lb.idx + 1) % this.lbItems.length;
+                this.lb.scale = 1; this.lb.tx = 0; this.lb.ty = 0;
+            },
+            lbPrev() {
+                this.lb.idx = (this.lb.idx - 1 + this.lbItems.length) % this.lbItems.length;
+                this.lb.scale = 1; this.lb.tx = 0; this.lb.ty = 0;
+            },
+            onLbWheel(e) {
+                if (this.lbItems[this.lb.idx]?.type === 'video') return;
+                e.preventDefault();
+                const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+                this.lb.scale = Math.max(1, Math.min(8, this.lb.scale * f));
+                if (this.lb.scale <= 1) { this.lb.tx = 0; this.lb.ty = 0; }
+            },
+            lbDragStart(e) {
+                if (this.lb.scale <= 1) return;
+                this.lb.dragging = true;
+                this.lb._ox = e.clientX - this.lb.tx;
+                this.lb._oy = e.clientY - this.lb.ty;
+            },
+            lbDragMove(e) {
+                if (!this.lb.dragging) return;
+                this.lb.tx = e.clientX - this.lb._ox;
+                this.lb.ty = e.clientY - this.lb._oy;
+            },
+            lbDragEnd() { this.lb.dragging = false; },
+            lbTouchStart(e) {
+                const isVideo = this.lbItems[this.lb.idx]?.type === 'video';
+                if (e.touches.length === 2 && !isVideo) {
+                    this.lb._pd = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    this.lb._ps = this.lb.scale;
+                } else if (e.touches.length === 1) {
+                    this.lb._sx = e.touches[0].clientX;
+                    this.lb._sy = e.touches[0].clientY;
+                    if (this.lb.scale > 1 && !isVideo) {
+                        this.lb.dragging = true;
+                        this.lb._ox = e.touches[0].clientX - this.lb.tx;
+                        this.lb._oy = e.touches[0].clientY - this.lb.ty;
+                    }
+                }
+            },
+            lbTouchMove(e) {
+                const isVideo = this.lbItems[this.lb.idx]?.type === 'video';
+                if (!isVideo) e.preventDefault();
+                if (isVideo) return;
+                if (e.touches.length === 2) {
+                    const d = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    this.lb.scale = Math.max(1, Math.min(8, this.lb._ps * d / this.lb._pd));
+                    if (this.lb.scale <= 1) { this.lb.tx = 0; this.lb.ty = 0; }
+                } else if (e.touches.length === 1 && this.lb.dragging) {
+                    this.lb.tx = e.touches[0].clientX - this.lb._ox;
+                    this.lb.ty = e.touches[0].clientY - this.lb._oy;
+                }
+            },
+            lbTouchEnd(e) {
+                this.lb.dragging = false;
+                if (e.changedTouches.length === 1) {
+                    const dx = e.changedTouches[0].clientX - this.lb._sx;
+                    const dy = e.changedTouches[0].clientY - this.lb._sy;
+                    const now = Date.now();
+                    const isQuick = Math.abs(dx) < 15 && Math.abs(dy) < 15;
+                    if (isQuick && now - this.lb._lastTap < 300) {
+                        if (this.lbItems[this.lb.idx]?.type === 'image') {
+                            if (this.lb.scale > 1) {
+                                this.lb.scale = 1; this.lb.tx = 0; this.lb.ty = 0;
+                            } else {
+                                this.lb.scale = 2.5;
+                            }
+                        }
+                        this.lb._lastTap = 0;
+                    } else {
+                        if (isQuick) this.lb._lastTap = now;
+                        if (this.lb.scale <= 1 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                            dx < 0 ? this.lbNext() : this.lbPrev();
+                        }
+                    }
+                }
             },
 
             // ── Upload dialog ───────────────────────────────────────────────
@@ -350,11 +529,21 @@
                 } else {
                     this.dialogStep = 'identity';
                 }
+                this._dialogScrollY = window.scrollY;
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${this._dialogScrollY}px`;
+                document.body.style.overflow = 'hidden';
+                document.body.style.width = '100%';
                 this.dialogOpen = true;
             },
 
             closeDialog() {
                 this.dialogOpen = false;
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.overflow = '';
+                document.body.style.width = '';
+                window.scrollTo(0, this._dialogScrollY || 0);
                 if (this.dialogStep === 'done') {
                     this.loadGallery();
                 }
@@ -411,12 +600,19 @@
                 this.fileError = '';
                 this.uploading = true;
                 this.dialogStep = 'uploading';
-                this.uploadProgress = this.selectedFiles.map(f => ({ name: f.name, percent: 0 }));
+                this.uploadDone = 0;
+                this.uploadTotal = this.selectedFiles.length;
+                this.totalPercent = 0;
+                // track per-file progress for combined calculation
+                const perFile = this.selectedFiles.map(() => 0);
 
                 let allOk = true;
                 for (let i = 0; i < this.selectedFiles.length; i++) {
-                    const ok = await this._uploadOne(this.selectedFiles[i], i);
+                    const ok = await this._uploadOne(this.selectedFiles[i], i, perFile);
                     if (!ok) allOk = false;
+                    this.uploadDone = i + 1;
+                    perFile[i] = 100;
+                    this.totalPercent = Math.round(perFile.reduce((s, v) => s + v, 0) / this.uploadTotal);
                 }
 
                 this.uploading = false;
@@ -428,7 +624,7 @@
                 }
             },
 
-            _uploadOne(file, index) {
+            _uploadOne(file, index, perFile) {
                 return new Promise((resolve) => {
                     const formData = new FormData();
                     formData.append('name', this.guestName.trim());
@@ -440,15 +636,12 @@
 
                     xhr.upload.addEventListener('progress', (e) => {
                         if (e.lengthComputable) {
-                            this.uploadProgress[index] = {
-                                name: file.name,
-                                percent: Math.round((e.loaded / e.total) * 100),
-                            };
+                            perFile[index] = Math.round((e.loaded / e.total) * 100);
+                            this.totalPercent = Math.round(perFile.reduce((s, v) => s + v, 0) / this.uploadTotal);
                         }
                     });
 
                     xhr.addEventListener('load', () => {
-                        this.uploadProgress[index] = { name: file.name, percent: 100 };
                         resolve(xhr.status >= 200 && xhr.status < 300);
                     });
 
