@@ -15,6 +15,10 @@ dependencies = [
     "pyyaml>=6.0",
     "python-dotenv>=1.2.2",
     "pillow>=12.2.0",
+    "sqlalchemy[asyncio]>=2.0.50",
+    "asyncpg>=0.31.0",
+    "minio>=7.2.20",
+    "python-magic>=0.4.27",
 ]
 
 [project.scripts]
@@ -26,5 +30,6 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "pandas>=3.0.3",
     "ruff>=0.15.14",
 ]
