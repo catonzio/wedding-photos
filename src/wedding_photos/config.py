@@ -17,7 +17,7 @@ BASE_DIR = Path(__file__).parent.parent.parent
 
 TEMPLATES_DIR = BASE_DIR / "src" / "templates"
 STATIC_DIR = BASE_DIR / "static"
-TABLES_YAML = Path(os.getenv("TABLES_YAML", BASE_DIR / "tables.yaml"))
+TABLES_YAML = Path(os.getenv("TABLES_YAML", BASE_DIR / "data" / "tables.yaml"))
 
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -38,7 +38,7 @@ if not ADMIN_TOKEN:
         'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(32))"'
     )
 
-GUESTS_YAML: str = os.getenv("GUESTS_YAML", str(BASE_DIR / "guests.yaml"))
+GUESTS_YAML: str = os.getenv("GUESTS_YAML", str(BASE_DIR / "data" / "guests.yaml"))
 
 # ---------------------------------------------------------------------------
 # MinIO

@@ -14,8 +14,8 @@ RUN uv sync --frozen --no-dev
 
 # Copy required files
 COPY static /app/static
-COPY tables.yaml /app/tables.yaml
-COPY guests.yaml /app/guests.yaml
+COPY data/tables.yaml /app/data/tables.yaml
+COPY data/guests.yaml /app/data/guests.yaml
 
 EXPOSE 8000
 CMD [".venv/bin/python", "-m", "fastapi", "run", "src/wedding_photos/main.py", "--host", "0.0.0.0", "--port", "8000"]

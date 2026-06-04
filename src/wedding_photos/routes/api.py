@@ -17,9 +17,9 @@ import uuid
 from typing import Annotated
 
 import magic
-from PIL import Image, ImageOps
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
+from PIL import Image, ImageOps
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 

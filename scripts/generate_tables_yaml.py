@@ -1,10 +1,11 @@
+from pathlib import Path
+
 import pandas as pd
 import yaml
-from pathlib import Path
 
 CSV_PATH = "tables.csv"
 MEDIA_DIR = Path("static/media")
-OUTPUT_PATH = "tables.yaml"
+OUTPUT_PATH = "data/tables.yaml"
 
 
 def get_media_files(table_dir: Path) -> list[str]:

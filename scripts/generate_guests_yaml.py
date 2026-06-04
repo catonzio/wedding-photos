@@ -19,5 +19,5 @@ result = [{"name": first, "surname": last} for first, last in names_splitted]
 
 yaml_content = yaml.dump(result, allow_unicode=True, default_flow_style=False)
 
-with open("guests.yaml", "w", encoding="utf-8") as file:
+with open("data/guests.yaml", "w", encoding="utf-8") as file:
     file.write(yaml_content)
