@@ -64,9 +64,9 @@
     lbItems: [
         {% for item in table.media %}
         {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
-        { src: '{{ url_for('static', path='media/' ~ item) }}', type: 'video', alt: '' },
+        { src: '/api/site-photos/{{ item }}', type: 'video', alt: '' },
         {% else %}
-        { src: '{{ url_for('static', path='media/' ~ item) }}', type: 'image', alt: 'Foto {{ loop.index }} \u2014 {{ table.name }}' },
+        { src: '/api/site-photos/{{ item }}', type: 'image', alt: 'Foto {{ loop.index }} \u2014 {{ table.name }}' },
         {% endif %}
         {% endfor %}
     ],
@@ -223,11 +223,11 @@
                 {% for item in table.media %}
                 <div class="swiper-slide">
                     {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
-                    <video src="{{ url_for('static', path='media/' ~ item) }}" controls playsinline preload="metadata"
+                    <video src="/api/site-photos/{{ item }}" controls playsinline preload="metadata"
                         class="w-full h-full object-cover"></video>
                     {% else %}
-                    <img src="{{ url_for('static', path='media/' ~ item) }}"
-                        alt="Foto {{ loop.index }} — {{ table.name }}" class="w-full h-full object-cover cursor-zoom-in"
+                    <img src="/api/site-photos/{{ item }}" alt="Foto {{ loop.index }} — {{ table.name }}"
+                        class="w-full h-full object-cover cursor-zoom-in"
                         loading="{% if loop.first %}eager{% else %}lazy{% endif %}"
                         @click="openLb({{ loop.index0 }})" />
                     {% endif %}

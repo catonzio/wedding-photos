@@ -1,12 +1,15 @@
 """
-API routes for guest uploads.
+API routes for guest uploads and admin operations.
 
 Endpoints:
-  POST /api/guests/validate        — validate guest name + surname
-  POST /api/uploads                — upload a file
-  GET  /api/uploads                — list all uploads (for the gallery)
-  GET  /api/uploads/{id}/media     — proxy file from MinIO to the browser
-  POST /api/admin/reload-guests    — reload guests.yaml (ADMIN_TOKEN required)
+  POST /api/guests/validate               — validate guest name + surname
+  POST /api/uploads                       — upload a file
+  GET  /api/uploads                       — list all uploads (for the gallery)
+  GET  /api/uploads/{id}/media            — proxy file from MinIO uploads bucket
+  GET  /api/site-photos/{path}            — proxy table photo from site-photos bucket
+  POST /api/admin/tables/{id}/photos      — upload/replace a table photo (ADMIN_TOKEN)
+  DELETE /api/admin/tables/{id}/photos/{key} — remove a table photo (ADMIN_TOKEN)
+  POST /api/admin/reload-guests           — reload guests.yaml (ADMIN_TOKEN required)
 """
 
 from __future__ import annotations
@@ -239,6 +242,69 @@ async def get_upload_media(
 
     data, content_type = await storage.get_file(upload.s3_key)
     return Response(content=data, media_type=content_type)
+
+
+@router.get("/site-photos/{photo_path:path}", name="get_site_photo")
+async def get_site_photo(photo_path: str) -> Response:
+    """Proxy a table photo from the site-photos bucket. No token required (used by <img> tags)."""
+    try:
+        data, content_type = await storage.get_site_photo(photo_path)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Foto non trovata.")
+    return Response(content=data, media_type=content_type)
+
+
+@router.post("/admin/tables/{table_id}/photos", name="admin_upload_table_photo")
+async def admin_upload_table_photo(
+    table_id: int,
+    file: Annotated[UploadFile, File()],
+    _: None = Depends(_require_admin),
+) -> dict:
+    """Upload or replace a photo for *table_id* in the site-photos bucket.
+
+    The file is stored at ``table_{id}/{original_filename}`` and the key is
+    returned so the caller can update ``tables.yaml`` accordingly.
+    """
+    data = await file.read()
+
+    if len(data) > _MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File troppo grande (max 50 MB).")
+
+    detected_mime = magic.from_buffer(data[:2048], mime=True)
+    if not any(detected_mime.startswith(p) for p in _ALLOWED_MIME_PREFIXES):
+        raise HTTPException(
+            status_code=415,
+            detail=f"Tipo di file non supportato: {detected_mime}.",
+        )
+
+    original_filename = file.filename or "photo"
+    key = f"table_{table_id}/{original_filename}"
+    await storage.upload_site_photo(key, data, detected_mime)
+    return {"key": key, "mime_type": detected_mime, "size": len(data)}
+
+
+@router.delete("/admin/tables/{table_id}/photos/{photo_key:path}", name="admin_delete_table_photo")
+async def admin_delete_table_photo(
+    table_id: int,
+    photo_key: str,
+    _: None = Depends(_require_admin),
+) -> dict:
+    """Delete a photo from the site-photos bucket.
+
+    *photo_key* is the key relative to the bucket root (e.g. ``table_1/cover.jpg``).
+    The key must belong to the given table (prefix ``table_{id}/``).
+    """
+    expected_prefix = f"table_{table_id}/"
+    if not photo_key.startswith(expected_prefix):
+        raise HTTPException(
+            status_code=400,
+            detail=f"La chiave deve iniziare con '{expected_prefix}'.",
+        )
+    try:
+        await storage.delete_site_photo(photo_key)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    return {"deleted": photo_key}
 
 
 @router.post("/admin/reload-guests")

@@ -23,8 +23,9 @@ _templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 async def require_token(request: Request, call_next: Any) -> Response:
     path = request.url.path
 
-    # Static files are always allowed — see module docstring.
-    if path.startswith("/static"):
+    # Static files and proxied site-photos are always allowed — images loaded by
+    # <img> tags don't carry query params, and the token gate on HTML pages is sufficient.
+    if path.startswith("/static") or path.startswith("/api/site-photos"):
         return await call_next(request)
 
     # Admin endpoints are protected by ADMIN_TOKEN Bearer header (checked in the

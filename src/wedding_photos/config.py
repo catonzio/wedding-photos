@@ -46,8 +46,11 @@ GUESTS_YAML: str = os.getenv("GUESTS_YAML", str(BASE_DIR / "data" / "guests.yaml
 MINIO_ENDPOINT: str = os.getenv("MINIO_ENDPOINT", "localhost:9000")
 MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
-MINIO_BUCKET: str = os.getenv("MINIO_BUCKET", "wedding-uploads")
 MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"
+# Bucket for guest photo uploads
+MINIO_UPLOADS_BUCKET: str = os.getenv("MINIO_UPLOADS_BUCKET", "uploads")
+# Bucket for site/table photos (replaces the local static/media folder)
+MINIO_SITE_PHOTOS_BUCKET: str = os.getenv("MINIO_SITE_PHOTOS_BUCKET", "site-photos")
 
 # ---------------------------------------------------------------------------
 # Database

@@ -45,7 +45,7 @@
                 <!-- Cover image -->
                 <div class="aspect-[4/3] bg-sage-light overflow-hidden">
                     {% if table.cover %}
-                    <img src="{{ url_for('static', path='media/' ~ table.cover) }}" alt="{{ table.name }}"
+                    <img src="/api/site-photos/{{ table.cover }}" alt="{{ table.name }}"
                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy" />
                     {% else %}

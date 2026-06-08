@@ -193,7 +193,7 @@
                     <!-- Cover thumbnail -->
                     <div class="w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-sage-light">
                         {% if table.cover %}
-                        <img src="{{ url_for('static', path='media/' ~ table.cover) }}" alt="{{ table.name }}"
+                        <img src="/api/site-photos/{{ table.cover }}" alt="{{ table.name }}"
                             class="w-full h-full object-cover" loading="lazy" />
                         {% endif %}
                     </div>

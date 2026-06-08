@@ -14,10 +14,13 @@ from wedding_photos.database import create_tables
 from wedding_photos.middleware import require_token
 from wedding_photos.repositories import GuestRepository
 from wedding_photos.routes import api, pages
+from wedding_photos import storage
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Ensure MinIO buckets exist before accepting requests.
+    storage.ensure_buckets()
     # Create DB tables and load guest list before accepting requests.
     await create_tables()
     GuestRepository.load()
