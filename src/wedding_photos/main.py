@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Wedding Photos", lifespan=lifespan)
+app = FastAPI(title="Wedding Photos", lifespan=lifespan, root_path="/wedding-photos")
 
 app.middleware("http")(require_token)
 

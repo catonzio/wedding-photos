@@ -4,8 +4,8 @@
 
 {% block content %}
 <div class="max-w-[480px] mx-auto px-5 py-6" x-data="weddingApp('{{ token }}')"
-    @keydown.escape.window="lb.open ? closeLightbox() : closeDialog()" @keydown.arrow-left.window="lb.open && lbPrev()"
-    @keydown.arrow-right.window="lb.open && lbNext()">
+    @keydown.escape.window="lb.open ? closeLightbox() : tryCloseDialog()"
+    @keydown.arrow-left.window="lb.open && lbPrev()" @keydown.arrow-right.window="lb.open && lbNext()">
 
     <!-- ── Tab bar ─────────────────────────────────────────────────────── -->
     <div class="flex mb-6 border-b border-border">
@@ -235,14 +235,14 @@
         <div x-show="dialogOpen" x-transition:enter="transition ease-out duration-200"
             x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0" @click.self="closeDialog()"
-            class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center" style="display: none;">
+            x-transition:leave-end="opacity-0" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center"
+            style="display: none;">
             <div class="w-full max-w-[440px] bg-surface rounded-2xl shadow-xl p-6 pb-safe mx-4" @click.stop>
 
                 <!-- Dialog header -->
                 <div class="flex items-center justify-between mb-5">
                     <h3 class="font-serif italic text-xl text-text">Carica una foto</h3>
-                    <button @click="closeDialog()" class="text-muted hover:text-text">
+                    <button @click="tryCloseDialog()" class="text-muted hover:text-text">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                             stroke="currentColor" class="w-5 h-5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -329,6 +329,16 @@
         </div><!-- /upload dialog -->
     </template>
 
+    <!-- ── Snackbar ─────────────────────────────────────────────────────── -->
+    <template x-teleport="body">
+        <div x-show="snackbar" x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 translate-y-2"
+            class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] px-5 py-3 rounded-full bg-text text-white font-sans text-sm shadow-lg whitespace-nowrap"
+            style="display:none;" x-text="snackbarMsg"></div>
+    </template>
+
 </div><!-- /x-data -->
 {% endblock %}
 
@@ -359,6 +369,11 @@
             // Dialog
             dialogOpen: false,
             dialogStep: 'identity',   // 'identity' | 'file' | 'uploading' | 'done'
+
+            // Snackbar
+            snackbar: false,
+            snackbarMsg: '',
+            _snackbarTimer: null,
 
             // Identity step
             guestName: '',
@@ -510,6 +525,23 @@
                         }
                     }
                 }
+            },
+
+            // ── Snackbar ────────────────────────────────────────────────────
+            showSnackbar(msg) {
+                this.snackbarMsg = msg;
+                this.snackbar = true;
+                clearTimeout(this._snackbarTimer);
+                this._snackbarTimer = setTimeout(() => { this.snackbar = false; }, 3000);
+            },
+
+            // ── Try-close (respects upload lock) ────────────────────────────
+            tryCloseDialog() {
+                if (this.dialogStep === 'uploading') {
+                    this.showSnackbar('Attendi il completamento del caricamento.');
+                    return;
+                }
+                this.closeDialog();
             },
 
             // ── Upload dialog ───────────────────────────────────────────────
