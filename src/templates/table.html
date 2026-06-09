@@ -64,9 +64,9 @@
     lbItems: [
         {% for item in table.media %}
         {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
-        { src: '/api/site-photos/{{ item }}', type: 'video', alt: '' },
+        { src: '/wedding-photos/api/site-photos/{{ item }}', type: 'video', alt: '' },
         {% else %}
-        { src: '/api/site-photos/{{ item }}', type: 'image', alt: 'Foto {{ loop.index }} \u2014 {{ table.name }}' },
+        { src: '/wedding-photos/api/site-photos/{{ item }}', type: 'image', alt: 'Foto {{ loop.index }} \u2014 {{ table.name }}' },
         {% endif %}
         {% endfor %}
     ],
@@ -223,10 +223,10 @@
                 {% for item in table.media %}
                 <div class="swiper-slide">
                     {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
-                    <video src="/api/site-photos/{{ item }}" controls playsinline preload="metadata"
+                    <video src="/wedding-photos/api/site-photos/{{ item }}" controls playsinline preload="metadata"
                         class="w-full h-full object-cover"></video>
                     {% else %}
-                    <img src="/api/site-photos/{{ item }}" alt="Foto {{ loop.index }} — {{ table.name }}"
+                    <img src="/wedding-photos/api/site-photos/{{ item }}" alt="Foto {{ loop.index }} — {{ table.name }}"
                         class="w-full h-full object-cover cursor-zoom-in"
                         loading="{% if loop.first %}eager{% else %}lazy{% endif %}"
                         @click="openLb({{ loop.index0 }})" />

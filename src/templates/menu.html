@@ -45,7 +45,7 @@
                 <!-- Cover image -->
                 <div class="aspect-[4/3] bg-sage-light overflow-hidden">
                     {% if table.cover %}
-                    <img src="/api/site-photos/{{ table.cover }}" alt="{{ table.name }}"
+                    <img src="/wedding-photos/api/site-photos/{{ table.cover }}" alt="{{ table.name }}"
                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                         loading="lazy" />
                     {% else %}
@@ -406,7 +406,7 @@
             async loadGallery() {
                 this.galleryLoading = true;
                 try {
-                    const res = await fetch(`/api/uploads?t=${encodeURIComponent(this.token)}`);
+                    const res = await fetch(`/wedding-photos/api/uploads?t=${encodeURIComponent(this.token)}`);
                     if (res.ok) {
                         this.gallery = await res.json();
                     }
@@ -590,7 +590,7 @@
                 }
                 this.identityLoading = true;
                 try {
-                    const res = await fetch(`/api/guests/validate?t=${encodeURIComponent(this.token)}`, {
+                    const res = await fetch(`/wedding-photos/api/guests/validate?t=${encodeURIComponent(this.token)}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ name: this.guestName.trim(), surname: this.guestSurname.trim() }),
@@ -664,7 +664,7 @@
                     formData.append('file', file);
 
                     const xhr = new XMLHttpRequest();
-                    xhr.open('POST', `/api/uploads?t=${encodeURIComponent(this.token)}`);
+                    xhr.open('POST', `/wedding-photos/api/uploads?t=${encodeURIComponent(this.token)}`);
 
                     xhr.upload.addEventListener('progress', (e) => {
                         if (e.lengthComputable) {
