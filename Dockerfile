@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir uv
 RUN uv sync --frozen --no-dev
 
 # Copy required files
-COPY static /app/static
+# COPY static /app/static
 COPY data/tables.yaml /app/data/tables.yaml
 COPY data/guests.yaml /app/data/guests.yaml
 

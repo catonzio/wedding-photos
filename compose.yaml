@@ -9,6 +9,8 @@ services:
       - db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - wedding-photos-network  # Private network for BE-FE communication
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wedding"]
       interval: 5s
@@ -24,8 +26,10 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "9500:9000"
+      - "9501:9001"
+    networks:
+      - wedding-photos-network  # Private network for BE-FE communication
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
@@ -37,9 +41,11 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    networks:
+      - wedding-photos-network  # Private network for BE-FE communication
     entrypoint: >
       /bin/sh -c "
-        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        mc alias set local http://minio:9500 minioadmin minioadmin &&
         mc mb --ignore-existing local/uploads &&
         mc mb --ignore-existing local/site-photos
       "
@@ -49,11 +55,37 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    networks:
+      - wedding-photos-network  # Private network for BE-FE communication
+      - traefik-network      # Public network for Traefik routing
+    labels:
+      - "traefik.enable=true"
+      # Route /wedding-photos to frontend (but not /wedding-photos/api)
+      - "traefik.http.routers.wedding-photos.rule=PathPrefix(`/wedding-photos`)"
+      - "traefik.http.routers.wedding-photos.tls=true"
+      - "traefik.http.routers.wedding-photos.entrypoints=web,websecure"
+      - "traefik.http.routers.wedding-photos.priority=50"  # Lower priority so API takes precedence
+      - "traefik.http.services.wedding-photos.loadbalancer.server.port=8000"
+      - "traefik.docker.network=traefik-network"
+      # Middleware to strip the /wedding-photos prefix for the frontend
+      - "traefik.http.middlewares.wedding-photos-strip.stripprefix.prefixes=/wedding-photos"
+      - "traefik.http.routers.wedding-photos.middlewares=wedding-photos-strip"
     depends_on:
       db:
         condition: service_healthy
       minio:
         condition: service_healthy
+
+
+networks:
+  # Private network for internal BE-FE communication
+  wedding-photos-network:
+    name: wedding-photos-network
+    driver: bridge
+  
+  # Shared network with Traefik
+  traefik-network:
+    external: true
 
 volumes:
   db_data:
