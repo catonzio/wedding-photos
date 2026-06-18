@@ -19,6 +19,7 @@ dependencies = [
     "asyncpg>=0.31.0",
     "minio>=7.2.20",
     "python-magic>=0.4.27",
+    "qrcode>=8.0",
 ]
 
 [project.scripts]
