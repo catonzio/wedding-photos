@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:17-alpine
+    container_name: wedding-photos-db
     environment:
       POSTGRES_USER: wedding
       POSTGRES_PASSWORD: wedding
@@ -20,6 +21,7 @@ services:
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
+    container_name: wedding-photos-minio
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
@@ -38,6 +40,7 @@ services:
 
   minio-init:
     image: minio/mc:latest
+    container_name: wedding-photos-minio-init
     depends_on:
       minio:
         condition: service_healthy
@@ -55,6 +58,7 @@ services:
     ports:
       - "8000:8000"
     env_file: .env
+    container_name: wedding-photos
     networks:
       - wedding-photos-network  # Private network for BE-FE communication
       - traefik-network      # Public network for Traefik routing
