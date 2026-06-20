@@ -125,7 +125,8 @@ def _require_admin(request: Request) -> None:
 
 def _upload_to_out(upload, request: Request) -> dict:
     token = request.query_params.get("t", "")
-    media_url = str(request.url_for("get_upload_media", upload_id=upload.id))
+    # Return relative URL so browser uses the same scheme as the page (fixes mixed content warning)
+    media_url = f"/wedding-photos/api/uploads/{upload.id}/media"
     if token:
         media_url = f"{media_url}?t={token}"
     return {
@@ -283,7 +284,9 @@ async def admin_upload_table_photo(
     return {"key": key, "mime_type": detected_mime, "size": len(data)}
 
 
-@router.delete("/admin/tables/{table_id}/photos/{photo_key:path}", name="admin_delete_table_photo")
+@router.delete(
+    "/admin/tables/{table_id}/photos/{photo_key:path}", name="admin_delete_table_photo"
+)
 async def admin_delete_table_photo(
     table_id: int,
     photo_key: str,
