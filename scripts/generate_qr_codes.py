@@ -39,7 +39,7 @@ output_dir.mkdir(exist_ok=True)
 urls = [
     f"https://danilocatone.com/wedding-photos/table/{i}?t={SECRET_TOKEN}"
     for i in range(1, 17)
-]
+] + ["https://danilocatone.com/wedding-photos/menu?t=wmo8RQ"]
 
 
 def add_logo_to_qr(qr_img: Image.Image, logo_path: Path | str) -> Image.Image:
@@ -125,7 +125,10 @@ for i, url in enumerate(urls, start=1):
         img = add_text_label(img, f"Table {i}")
 
     # Save to file
-    filename = output_dir / f"table_{i}_qr.png"
+    if url == urls[-1]:  # Last URL is the menu
+        filename = output_dir / "menu_qr.png"
+    else:
+        filename = output_dir / f"table_{i}_qr.png"
     img.save(filename)
     print(f"✓ Created {filename}")
 
