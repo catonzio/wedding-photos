@@ -17,6 +17,7 @@ BASE_DIR = Path(__file__).parent.parent.parent
 
 TEMPLATES_DIR = BASE_DIR / "src" / "templates"
 STATIC_DIR = BASE_DIR / "static"
+SRC_JS_DIR = BASE_DIR / "src" / "js"
 TABLES_YAML = Path(os.getenv("TABLES_YAML", BASE_DIR / "data" / "tables.yaml"))
 
 STATIC_DIR.mkdir(parents=True, exist_ok=True)
