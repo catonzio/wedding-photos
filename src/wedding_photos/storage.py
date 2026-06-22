@@ -69,22 +69,24 @@ async def upload_file(key: str, data: bytes, content_type: str) -> str:
     return key
 
 
-async def get_file(key: str) -> tuple[bytes, str]:
+def get_file(key: str, bucket: str = MINIO_UPLOADS_BUCKET) -> tuple[bytes, str]:
+    """Return the raw bytes and content-type for *key* from the uploads bucket."""
+    response = _client.get_object(bucket, key)
+    try:
+        content_type = response.headers.get("content-type", "application/octet-stream")
+        return response.read(), content_type
+    finally:
+        response.close()
+        response.release_conn()
+
+
+async def get_file_async(
+    key: str, bucket: str = MINIO_UPLOADS_BUCKET
+) -> tuple[bytes, str]:
     """Return the raw bytes and content-type for *key* from the uploads bucket."""
     loop = asyncio.get_event_loop()
 
-    def _fetch() -> tuple[bytes, str]:
-        response = _client.get_object(MINIO_UPLOADS_BUCKET, key)
-        try:
-            content_type = response.headers.get(
-                "content-type", "application/octet-stream"
-            )
-            return response.read(), content_type
-        finally:
-            response.close()
-            response.release_conn()
-
-    return await loop.run_in_executor(None, _fetch)
+    return await loop.run_in_executor(None, partial(get_file, key, bucket))
 
 
 # ---------------------------------------------------------------------------
@@ -118,19 +120,19 @@ async def delete_site_photo(key: str) -> None:
     )
 
 
-async def get_site_photo(key: str) -> tuple[bytes, str]:
+def get_site_photo(key: str) -> tuple[bytes, str]:
+    """Return the raw bytes and content-type for *key* from the site-photos bucket."""
+    response = _client.get_object(MINIO_SITE_PHOTOS_BUCKET, key)
+    try:
+        content_type = response.headers.get("content-type", "application/octet-stream")
+        return response.read(), content_type
+    finally:
+        response.close()
+        response.release_conn()
+
+
+async def get_site_photo_async(key: str) -> tuple[bytes, str]:
     """Return the raw bytes and content-type for *key* from the site-photos bucket."""
     loop = asyncio.get_event_loop()
 
-    def _fetch() -> tuple[bytes, str]:
-        response = _client.get_object(MINIO_SITE_PHOTOS_BUCKET, key)
-        try:
-            content_type = response.headers.get(
-                "content-type", "application/octet-stream"
-            )
-            return response.read(), content_type
-        finally:
-            response.close()
-            response.release_conn()
-
-    return await loop.run_in_executor(None, _fetch)
+    return await loop.run_in_executor(None, partial(get_site_photo, key))

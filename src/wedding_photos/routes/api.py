@@ -21,7 +21,7 @@ from typing import Annotated
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 from PIL import Image, ImageOps
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -227,9 +227,14 @@ async def create_upload(
 async def list_uploads(
     request: Request,
     session: AsyncSession = Depends(get_session),
-) -> list[dict]:
+) -> JSONResponse:
     uploads = await UploadRepository.list_all(session)
-    return [_upload_to_out(u, request) for u in uploads]
+    data = [_upload_to_out(u, request) for u in uploads]
+    # Serve fresh for 60 s; allow stale up to 5 min while revalidating in background.
+    return JSONResponse(
+        content=data,
+        headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},
+    )
 
 
 @router.get("/uploads/{upload_id}/media", name="get_upload_media")
@@ -241,18 +246,28 @@ async def get_upload_media(
     if upload is None:
         raise HTTPException(status_code=404, detail="Upload non trovato.")
 
-    data, content_type = await storage.get_file(upload.s3_key)
-    return Response(content=data, media_type=content_type)
+    data, content_type = await storage.get_file_async(upload.s3_key)
+    # UUID-keyed media is immutable once uploaded — safe to cache for 12 h.
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=43200, immutable"},
+    )
 
 
 @router.get("/site-photos/{photo_path:path}", name="get_site_photo")
 async def get_site_photo(photo_path: str) -> Response:
     """Proxy a table photo from the site-photos bucket. No token required (used by <img> tags)."""
     try:
-        data, content_type = await storage.get_site_photo(photo_path)
+        data, content_type = await storage.get_site_photo_async(photo_path)
     except Exception:
         raise HTTPException(status_code=404, detail="Foto non trovata.")
-    return Response(content=data, media_type=content_type)
+    # Table photos change rarely; cache for 24 h.
+    return Response(
+        content=data,
+        media_type=content_type,
+        headers={"Cache-Control": "public, max-age=86400"},
+    )
 
 
 @router.post("/admin/tables/{table_id}/photos", name="admin_upload_table_photo")

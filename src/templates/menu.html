@@ -9,7 +9,7 @@
 
     <!-- ── Tab bar ─────────────────────────────────────────────────────── -->
     <div class="flex mb-6 border-b border-border">
-        <button @click="activeTab = 'tavoli'" :class="activeTab === 'tavoli'
+        <button @click="activateTables()" :class="activeTab === 'tavoli'
                 ? 'border-b-2 border-gold text-gold font-medium'
                 : 'text-muted'" class="flex-1 pb-3 font-sans text-sm tracking-wide transition-colors">I Tavoli</button>
         <button @click="activateGallery()" :class="activeTab === 'foto'
@@ -394,12 +394,36 @@
             init() {
                 this.guestName = localStorage.getItem('wedding_guest_name') || '';
                 this.guestSurname = localStorage.getItem('wedding_guest_surname') || '';
+
+                const requestedTab = this._getTabFromUrl();
+                this.activeTab = requestedTab;
+                this._setTabInUrl(requestedTab);
+                if (requestedTab === 'foto') {
+                    this.loadGallery();
+                }
             },
 
             // ── Tab helpers ─────────────────────────────────────────────────
+            activateTables() {
+                this.activeTab = 'tavoli';
+                this._setTabInUrl('tavoli');
+            },
+
             activateGallery() {
                 this.activeTab = 'foto';
+                this._setTabInUrl('foto');
                 this.loadGallery();
+            },
+
+            _getTabFromUrl() {
+                const tab = new URLSearchParams(window.location.search).get('tab');
+                return tab === 'foto' ? 'foto' : 'tavoli';
+            },
+
+            _setTabInUrl(tab) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('tab', tab === 'foto' ? 'foto' : 'tavoli');
+                window.history.replaceState({}, '', url.toString());
             },
 
             // ── Gallery ─────────────────────────────────────────────────────
