@@ -228,11 +228,15 @@ async def create_upload(
 @router.get("/uploads")
 async def list_uploads(
     request: Request,
+    skip: int = 0,
+    limit: int = 5,
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    uploads = await UploadRepository.list_all(session)
-    data = [_upload_to_out(u, request) for u in uploads]
-    # Serve fresh for 60 s; allow stale up to 5 min while revalidating in background.
+    items, has_more = await UploadRepository.list_paginated(session, skip=skip, limit=limit)
+    data = {
+        "items": [_upload_to_out(u, request) for u in items],
+        "has_more": has_more,
+    }
     return JSONResponse(
         content=data,
         headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},

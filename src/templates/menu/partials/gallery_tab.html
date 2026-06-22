@@ -58,9 +58,18 @@
         </template>
 
         <!-- Empty state -->
-        <div x-show="gallery.length === 0 && !galleryLoading" class="col-span-3 text-center py-16">
+        <div x-show="gallery.length === 0 && !galleryLoading && !galleryLoadingMore" class="col-span-3 text-center py-16">
             <p class="font-serif italic text-muted">Ancora nessuna foto. Sii il primo!</p>
         </div>
+    </div>
+
+    <!-- Load more spinner -->
+    <div x-show="galleryLoadingMore && !galleryLoading" class="flex justify-center py-4">
+        <svg class="animate-spin w-5 h-5 text-gold" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
     </div>
 
 </div><!-- /tab foto -->

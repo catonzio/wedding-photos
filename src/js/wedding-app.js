@@ -6,6 +6,11 @@ function weddingApp(token) {
         // Gallery
         gallery: [],
         galleryLoading: false,
+        galleryLoadingMore: false,
+        gallerySkip: 0,
+        galleryLimit: 30,
+        galleryHasMore: true,
+        _scrollHandler: null,
 
         // Lightbox
         lbItems: [],
@@ -61,6 +66,7 @@ function weddingApp(token) {
         activateTables() {
             this.activeTab = 'tavoli';
             this._setTabInUrl('tavoli');
+            this._teardownScroll();
         },
 
         activateGallery() {
@@ -82,16 +88,50 @@ function weddingApp(token) {
 
         // ── Gallery ─────────────────────────────────────────────────────
         async loadGallery() {
+            this._teardownScroll();
+            this.gallery = [];
+            this.gallerySkip = 0;
+            this.galleryHasMore = true;
             this.galleryLoading = true;
+            await this._fetchGalleryPage();
+            this.galleryLoading = false;
+            this._setupScroll();
+        },
+
+        async _fetchGalleryPage() {
+            if (!this.galleryHasMore || this.galleryLoadingMore) return;
+            this.galleryLoadingMore = true;
             try {
-                const res = await fetch(`/wedding-photos/api/uploads?t=${encodeURIComponent(this.token)}`);
+                const url = `/wedding-photos/api/uploads?t=${encodeURIComponent(this.token)}&skip=${this.gallerySkip}&limit=${this.galleryLimit}`;
+                const res = await fetch(url);
                 if (res.ok) {
-                    this.gallery = await res.json();
+                    const data = await res.json();
+                    this.gallery = this.gallery.concat(data.items);
+                    this.galleryHasMore = data.has_more;
+                    this.gallerySkip += data.items.length;
                 }
             } catch (e) {
                 console.error('Gallery load error', e);
             } finally {
-                this.galleryLoading = false;
+                this.galleryLoadingMore = false;
+            }
+        },
+
+        _setupScroll() {
+            if (this._scrollHandler) return;
+            this._scrollHandler = () => {
+                if (!this.galleryHasMore || this.galleryLoadingMore || this.galleryLoading) return;
+                if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 300) {
+                    this._fetchGalleryPage();
+                }
+            };
+            window.addEventListener('scroll', this._scrollHandler, { passive: true });
+        },
+
+        _teardownScroll() {
+            if (this._scrollHandler) {
+                window.removeEventListener('scroll', this._scrollHandler);
+                this._scrollHandler = null;
             }
         },
 

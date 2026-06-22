@@ -87,5 +87,19 @@ class UploadRepository:
         return list(result.scalars().all())
 
     @staticmethod
+    async def list_paginated(
+        session: AsyncSession, skip: int = 0, limit: int = 5
+    ) -> tuple[list[Upload], bool]:
+        result = await session.execute(
+            select(Upload)
+            .order_by(Upload.created_at.desc())
+            .offset(skip)
+            .limit(limit + 1)
+        )
+        items = list(result.scalars().all())
+        has_more = len(items) > limit
+        return items[:limit], has_more
+
+    @staticmethod
     async def get_by_id(session: AsyncSession, upload_id: uuid.UUID) -> Upload | None:
         return await session.get(Upload, upload_id)
