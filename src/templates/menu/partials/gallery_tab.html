@@ -1,0 +1,66 @@
+<!-- ── Tab 2: Le Foto ───────────────────────────────────────────────── -->
+<div x-show="activeTab === 'foto'" x-transition>
+
+    <!-- Gallery header -->
+    <div class="text-center mb-5">
+        <h2 class="font-serif font-light italic text-3xl text-text leading-tight">Le Foto</h2>
+        <p class="font-sans font-light text-muted text-sm mt-1 tracking-wide">
+            Condividi i tuoi momenti preferiti
+        </p>
+    </div>
+
+    <!-- Upload button (always visible) -->
+    <div class="flex justify-center mb-6">
+        <button @click="openDialog()"
+            class="flex items-center gap-2 px-5 py-2.5 rounded-full bg-gold text-white font-sans text-sm font-medium shadow-sm active:scale-[0.97] transition-transform">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
+                stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            Carica una foto
+        </button>
+    </div>
+
+    <!-- Loading state -->
+    <div x-show="galleryLoading" class="flex justify-center py-12">
+        <svg class="animate-spin w-6 h-6 text-gold" xmlns="http://www.w3.org/2000/svg" fill="none"
+            viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+    </div>
+
+    <!-- Gallery grid -->
+    <div x-show="!galleryLoading" class="grid grid-cols-3 gap-1.5">
+        <template x-for="item in gallery" :key="item.id">
+            <div @click="openLightbox(item)"
+                class="relative aspect-square bg-sage-light rounded overflow-hidden cursor-pointer active:scale-[0.97] transition-transform">
+                <!-- Image thumbnail -->
+                <template x-if="item.mime_type.startsWith('image/')">
+                    <img :src="item.media_url" :alt="item.guest_name" class="w-full h-full object-cover"
+                        loading="lazy" />
+                </template>
+                <!-- Video thumbnail placeholder -->
+                <template x-if="item.mime_type.startsWith('video/')">
+                    <div class="w-full h-full flex items-center justify-center bg-text/10">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24"
+                            class="w-8 h-8 text-muted">
+                            <path d="M8 5v14l11-7z" />
+                        </svg>
+                    </div>
+                </template>
+                <!-- Guest name overlay -->
+                <div
+                    class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent px-1.5 py-1">
+                    <p class="text-white font-sans text-[0.6rem] truncate" x-text="item.guest_name"></p>
+                </div>
+            </div>
+        </template>
+
+        <!-- Empty state -->
+        <div x-show="gallery.length === 0 && !galleryLoading" class="col-span-3 text-center py-16">
+            <p class="font-serif italic text-muted">Ancora nessuna foto. Sii il primo!</p>
+        </div>
+    </div>
+
+</div><!-- /tab foto -->

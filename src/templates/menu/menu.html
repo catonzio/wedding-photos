@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Tavoli · Il Nostro Matrimonio{% endblock %}
+
+{% block content %}
+<div class="max-w-[480px] mx-auto px-5 py-6" x-data="weddingApp('{{ token }}')"
+    @keydown.escape.window="lb.open ? closeLightbox() : tryCloseDialog()"
+    @keydown.arrow-left.window="lb.open && lbPrev()" @keydown.arrow-right.window="lb.open && lbNext()">
+
+    {% include "partials/tab_bar.html" %}
+
+    {% include "partials/tables_tab.html" %}
+
+    {% include "partials/gallery_tab.html" %}
+
+    {% include "partials/lightbox.html" %}
+
+    {% include "partials/upload_dialog.html" %}
+
+    {% include "partials/snackbar.html" %}
+
+</div><!-- /x-data -->
+{% endblock %}
+
+{% block head_extra %}
+<script src="{{ url_for('static', path='js/wedding-app.js') }}"></script>
+{% endblock %}

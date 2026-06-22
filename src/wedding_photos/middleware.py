@@ -25,7 +25,7 @@ async def require_token(request: Request, call_next: Any) -> Response:
 
     # Static files and proxied site-photos are always allowed — images loaded by
     # <img> tags don't carry query params, and the token gate on HTML pages is sufficient.
-    if path.startswith("/static") or "/api/site-photos" in path:
+    if path.startswith("/wedding-photos/static") or "/api/site-photos" in path:
         return await call_next(request)
 
     # Admin endpoints are protected by ADMIN_TOKEN Bearer header (checked in the

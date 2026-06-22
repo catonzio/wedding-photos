@@ -1,0 +1,80 @@
+<!-- ── Lightbox ─────────────────────────────────────────────────────── -->
+<template x-teleport="body">
+    <div x-show="lb.open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0"
+        x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150"
+        x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click.self="closeLightbox()"
+        class="fixed inset-0 z-50 flex items-center justify-center"
+        style="background:rgba(12,10,8,0.93);backdrop-filter:blur(12px);display:none;" @wheel="onLbWheel($event)"
+        @mousemove="lbDragMove($event)" @mouseup="lbDragEnd()" @mouseleave="lbDragEnd()"
+        @touchstart.passive="lbTouchStart($event)" @touchmove="lbTouchMove($event)" @touchend="lbTouchEnd($event)">
+
+        <!-- Image slide -->
+        <template x-if="lbItems[lb.idx]?.type === 'image'">
+            <img :src="lbItems[lb.idx]?.src" :alt="lbItems[lb.idx]?.alt" :style="`
+            display: block;
+            max-width: 100vw;
+            max-height: 100dvh;
+            object-fit: contain;
+            cursor: ${lb.scale > 1 ? (lb.dragging ? 'grabbing' : 'grab') : 'zoom-out'};
+            transform: translate(${lb.tx}px, ${lb.ty}px) scale(${lb.scale});
+            transform-origin: center center;
+            transition: ${lb.dragging ? 'none' : 'transform 0.15s ease'};
+            will-change: transform;
+            user-select: none;
+            -webkit-user-drag: none;
+        `" @mousedown.prevent="lbDragStart($event)" draggable="false" />
+        </template>
+
+        <!-- Video slide -->
+        <template x-if="lbItems[lb.idx]?.type === 'video'">
+            <video :src="lbItems[lb.idx]?.src" controls autoplay playsinline
+                style="max-width:100vw;max-height:90dvh;" class="rounded"></video>
+        </template>
+
+        <!-- Download -->
+        <a :href="lbItems[lb.idx]?.src" :download="lbItems[lb.idx]?.alt || 'media'" aria-label="Scarica"
+            style="position:absolute;top:1rem;left:1rem;"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+        </a>
+
+        <!-- Close -->
+        <button @click="closeLightbox()" aria-label="Chiudi" style="position:absolute;top:1rem;right:1rem;"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+        </button>
+
+        <!-- Prev -->
+        <button @click="lbPrev()" aria-label="Precedente" x-show="lbItems.length > 1"
+            style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+            </svg>
+        </button>
+
+        <!-- Next -->
+        <button @click="lbNext()" aria-label="Successiva" x-show="lbItems.length > 1"
+            style="position:absolute;right:0.75rem;top:50%;transform:translateY(-50%);"
+            class="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                stroke="currentColor" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+            </svg>
+        </button>
+
+        <!-- Counter -->
+        <div style="position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);">
+            <span class="text-white/60 font-sans text-xs tabular-nums"
+                x-text="`${lb.idx + 1} / ${lbItems.length}`"></span>
+        </div>
+    </div>
+</template>
