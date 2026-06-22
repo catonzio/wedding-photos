@@ -9,7 +9,6 @@ Endpoints:
   GET  /api/site-photos/{path}            — proxy table photo from site-photos bucket
   POST /api/admin/tables/{id}/photos      — upload/replace a table photo (ADMIN_TOKEN)
   DELETE /api/admin/tables/{id}/photos/{key} — remove a table photo (ADMIN_TOKEN)
-  POST /api/admin/reload-guests           — reload guests.yaml (ADMIN_TOKEN required)
 """
 
 from __future__ import annotations
@@ -147,8 +146,11 @@ def _upload_to_out(upload, request: Request) -> dict:
 
 
 @router.post("/guests/validate")
-async def validate_guest(body: ValidateRequest) -> dict:
-    if not GuestRepository.validate(body.name, body.surname):
+async def validate_guest(
+    body: ValidateRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    if not await GuestRepository.validate(session, body.name, body.surname):
         raise HTTPException(
             status_code=422,
             detail="Nome e cognome non trovati nella lista degli invitati.",
@@ -166,7 +168,7 @@ async def create_upload(
     session: AsyncSession = Depends(get_session),
 ) -> dict:
     # Re-validate guest
-    if not GuestRepository.validate(name, surname):
+    if not await GuestRepository.validate(session, name, surname):
         raise HTTPException(
             status_code=422,
             detail="Nome e cognome non trovati nella lista degli invitati.",
@@ -323,9 +325,3 @@ async def admin_delete_table_photo(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
     return {"deleted": photo_key}
-
-
-@router.post("/admin/reload-guests")
-async def reload_guests(_: None = Depends(_require_admin)) -> dict:
-    count = GuestRepository.reload()
-    return {"loaded": count}

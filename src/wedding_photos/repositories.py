@@ -1,54 +1,50 @@
 """
-Repository classes for guests and uploads.
+Repository classes for guests, tables, and uploads.
 """
 
 from __future__ import annotations
 
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
 
-import yaml
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from wedding_photos.config import GUESTS_YAML
-from wedding_photos.db_models import Upload
+from wedding_photos.db_models import Guest, Table, Upload
 
 # ---------------------------------------------------------------------------
-# Guest repository — in-memory cache backed by guests.yaml
+# Guest repository — DB-backed
 # ---------------------------------------------------------------------------
 
 
 class GuestRepository:
-    # Module-level cache: list of {"name": ..., "surname": ...} dicts (normalised lower-case)
-    _cache: list[dict[str, str]] = []
+    @staticmethod
+    async def validate(session: AsyncSession, name: str, surname: str) -> bool:
+        """Return True if (name, surname) exists in the guests table (case-insensitive)."""
+        result = await session.execute(
+            select(Guest).where(
+                Guest.name == name.strip().lower(),
+                Guest.surname == surname.strip().lower(),
+            )
+        )
+        return result.scalar_one_or_none() is not None
 
-    @classmethod
-    def _load_from_disk(cls) -> list[dict[str, str]]:
-        with Path(GUESTS_YAML).open() as f:
-            data = yaml.safe_load(f) or []
-        return [
-            {"name": g["name"].strip().lower(), "surname": g["surname"].strip().lower()}
-            for g in data
-        ]
 
-    @classmethod
-    def load(cls) -> None:
-        """Load guests from disk into the in-memory cache (called at startup)."""
-        cls._cache = cls._load_from_disk()
+# ---------------------------------------------------------------------------
+# Table repository
+# ---------------------------------------------------------------------------
 
-    @classmethod
-    def reload(cls) -> int:
-        """Re-read guests.yaml and replace the cache. Returns number of guests loaded."""
-        cls._cache = cls._load_from_disk()
-        return len(cls._cache)
 
-    @classmethod
-    def validate(cls, name: str, surname: str) -> bool:
-        """Return True if (name, surname) exists in the guest list (case-insensitive)."""
-        needle = {"name": name.strip().lower(), "surname": surname.strip().lower()}
-        return needle in cls._cache
+class TableRepository:
+    @staticmethod
+    async def list_all(session: AsyncSession) -> list[Table]:
+        result = await session.execute(select(Table).order_by(Table.id))
+        return list(result.scalars().all())
+
+    @staticmethod
+    async def get_by_id(session: AsyncSession, table_id: int) -> Table | None:
+        result = await session.execute(select(Table).where(Table.id == table_id))
+        return result.scalar_one_or_none()
 
 
 # ---------------------------------------------------------------------------
