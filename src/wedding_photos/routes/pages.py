@@ -50,7 +50,7 @@ async def menu_page(
     tables = await TableRepository.list_all(session)
     ctx = _base_context(request, tables)
     ctx["tables"] = tables
-    return templates.TemplateResponse(request=request, name="menu.html", context=ctx)
+    return templates.TemplateResponse(request=request, name="menu/menu.html", context=ctx)
 
 
 @router.get("/table/{table_id}", response_class=HTMLResponse, name="table_page")
