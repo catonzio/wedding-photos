@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from wedding_photos.config import IS_PRODUCTION
 from wedding_photos.database import get_session
 from wedding_photos.repositories import TableRepository
 from wedding_photos.templates import templates
@@ -48,7 +49,7 @@ async def menu_page(
     tables = await TableRepository.list_all(session)
     ctx = _base_context(request, tables)
     ctx["tables"] = tables
-    ctx["is_https"] = request.url.scheme == "https"
+    ctx["is_https"] = IS_PRODUCTION or request.url.scheme == "https"
     return templates.TemplateResponse(
         request=request, name="menu/menu.html", context=ctx
     )
@@ -66,5 +67,5 @@ async def table_page(
         return HTMLResponse("Tavolo non trovato", status_code=404)
     ctx = _base_context(request, tables, current_table_id=table_id)
     ctx["table"] = table
-    ctx["is_https"] = request.url.scheme == "https"
+    ctx["is_https"] = IS_PRODUCTION or request.url.scheme == "https"
     return templates.TemplateResponse(request=request, name="table.html", context=ctx)
