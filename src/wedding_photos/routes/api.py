@@ -239,10 +239,7 @@ async def list_uploads(
         "items": [_upload_to_out(u, request) for u in items],
         "has_more": has_more,
     }
-    return JSONResponse(
-        content=data,
-        headers={"Cache-Control": "public, max-age=60, stale-while-revalidate=300"},
-    )
+    return JSONResponse(content=data)
 
 
 @router.get("/uploads/{upload_id}/media", name="get_upload_media")
