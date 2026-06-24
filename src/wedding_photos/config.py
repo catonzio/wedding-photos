@@ -13,6 +13,8 @@ load_dotenv()  # Load environment variables from .env file
 
 BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
 
+IS_PRODUCTION = BASE_URL not in ("http://localhost:8000", "http://127.0.0.1:8000")
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------

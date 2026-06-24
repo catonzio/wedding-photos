@@ -28,7 +28,7 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "${MINIO_PORT}:9000"
+      - "${MINIO_EXTERNAL_PORT}:${MINIO_PORT}"
       - "${MINIO_DASHBOARD_PORT}:9001"
     networks:
       - wedding-photos-network  # Private network for BE-FE communication

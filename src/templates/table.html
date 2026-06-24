@@ -47,8 +47,11 @@
         border-radius: 999px;
     }
 </style>
-
+{% if is_https %}
 <script src="{{ https_url_for(request, 'static', path='js/table-app.js') }}"></script>
+{% else %}
+<script src="{{ url_for('static', path='js/table-app.js') }}"></script>
+{% endif %}
 {% endblock %}
 
 {% block content %}

@@ -23,5 +23,9 @@
 {% endblock %}
 
 {% block head_extra %}
+{% if is_https %}
 <script src="{{ https_url_for(request, 'static', path='js/wedding-app.js') }}"></script>
+{% else %}
+<script src="{{ url_for('static', path='js/wedding-app.js') }}"></script>
+{% endif %}
 {% endblock %}
