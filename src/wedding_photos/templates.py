@@ -13,7 +13,7 @@ def https_url_for(request: Request, name: str, **path_params: Any) -> str:
     http_url = request.url_for(name, **path_params)
 
     # Replace 'http' with 'https'
-    return http_url.replace("http", "https", 1)  # type: ignore
+    return str(http_url).replace("http", "https", 1)
 
 
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
