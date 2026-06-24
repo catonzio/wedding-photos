@@ -13,11 +13,9 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import Request, Response
-from fastapi.templating import Jinja2Templates
 
-from wedding_photos.config import SECRET_TOKEN, TEMPLATES_DIR
-
-_templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+from wedding_photos.config import SECRET_TOKEN
+from wedding_photos.templates import templates
 
 
 async def require_token(request: Request, call_next: Any) -> Response:
@@ -35,6 +33,6 @@ async def require_token(request: Request, call_next: Any) -> Response:
 
     token = request.query_params.get("t", "")
     if token != SECRET_TOKEN:
-        return _templates.TemplateResponse(request=request, name="denied.html")
+        return templates.TemplateResponse(request=request, name="denied.html")
 
     return await call_next(request)

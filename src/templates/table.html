@@ -48,7 +48,7 @@
     }
 </style>
 
-<script src="{{ url_for('static', path='js/table-app.js') }}"></script>
+<script src="{{ https_url_for(request, 'static', path='js/table-app.js') }}"></script>
 {% endblock %}
 
 {% block content %}

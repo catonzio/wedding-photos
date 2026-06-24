@@ -232,7 +232,9 @@ async def list_uploads(
     limit: int = 5,
     session: AsyncSession = Depends(get_session),
 ) -> JSONResponse:
-    items, has_more = await UploadRepository.list_paginated(session, skip=skip, limit=limit)
+    items, has_more = await UploadRepository.list_paginated(
+        session, skip=skip, limit=limit
+    )
     data = {
         "items": [_upload_to_out(u, request) for u in items],
         "has_more": has_more,

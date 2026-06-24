@@ -10,6 +10,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environment variables from .env file
+
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8000")
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------

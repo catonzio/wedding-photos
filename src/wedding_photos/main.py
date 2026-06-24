@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from wedding_photos import storage
-from wedding_photos.config import STATIC_DIR, SRC_JS_DIR
+from wedding_photos.config import SRC_JS_DIR, STATIC_DIR
 from wedding_photos.database import create_tables
 from wedding_photos.middleware import require_token
 from wedding_photos.routes import api, pages
