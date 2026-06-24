@@ -64,16 +64,13 @@ services:
       - traefik-network      # Public network for Traefik routing
     labels:
       - "traefik.enable=true"
-      # Route /wedding-photos to frontend (but not /wedding-photos/api)
+      # Route /wedding-photos to the app.
       - "traefik.http.routers.wedding-photos.rule=PathPrefix(`/wedding-photos`)"
       - "traefik.http.routers.wedding-photos.tls=true"
       - "traefik.http.routers.wedding-photos.entrypoints=web,websecure"
       - "traefik.http.routers.wedding-photos.priority=50"  # Lower priority so API takes precedence
       - "traefik.http.services.wedding-photos.loadbalancer.server.port=8000"
       - "traefik.docker.network=traefik-network"
-      # Middleware to strip the /wedding-photos prefix for the frontend
-      - "traefik.http.middlewares.wedding-photos-strip.stripprefix.prefixes=/wedding-photos"
-      - "traefik.http.routers.wedding-photos.middlewares=wedding-photos-strip"
     depends_on:
       db:
         condition: service_healthy
