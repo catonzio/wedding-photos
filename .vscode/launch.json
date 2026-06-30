@@ -12,6 +12,10 @@
             "args": [
                 "dev",
                 "src/wedding_photos/main.py",
+                "--host",
+                "0.0.0.0",
+                "--port",
+                "8000",
                 "--reload"
             ],
             "jinja": true
