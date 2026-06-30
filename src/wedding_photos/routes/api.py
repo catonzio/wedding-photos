@@ -236,47 +236,66 @@ async def get_site_photo(photo_path: str) -> Response:
 @router.post("/admin/tables/{table_id}/photos", name="admin_upload_table_photo")
 async def admin_upload_table_photo(
     table_id: int,
-    file: Annotated[UploadFile, File()],
+    files: Annotated[list[UploadFile], File()],
     _: None = Depends(_require_admin),
 ) -> dict:
     """Upload or replace a photo for *table_id* in the site-photos bucket.
 
-    The file is normalized to a browser-friendly format and stored at
-    ``table_{id}/{original_stem}{normalized_ext}``. The resulting key is returned
-    so the caller can update ``tables.yaml`` accordingly.
+    Files are normalized to browser-friendly formats and stored at
+    ``table_{id}/{original_stem}{normalized_ext}``. Returned keys can be used
+    to update ``tables.yaml`` accordingly.
     """
-    data = await file.read()
+    if not files:
+        raise HTTPException(status_code=422, detail="Nessun file caricato.")
 
-    if len(data) > _MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File troppo grande (max 50 MB).")
-
-    detected_mime = magic.from_buffer(data[:2048], mime=True)
-    if not any(detected_mime.startswith(p) for p in _ALLOWED_MIME_PREFIXES):
-        raise HTTPException(
-            status_code=415,
-            detail=f"Tipo di file non supportato: {detected_mime}.",
-        )
-
-    original_filename = file.filename or "photo"
+    uploaded: list[dict] = []
+    used_keys: set[str] = set()
     loop = asyncio.get_event_loop()
-    try:
-        data, detected_mime, suffix = await loop.run_in_executor(
-            None,
-            lambda: normalize_media_for_web(
-                data,
-                detected_mime,
-                original_filename,
-                max_dimension=_MAX_DIMENSION,
-                jpeg_quality=_JPEG_QUALITY,
-            ),
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=415, detail=str(exc))
 
-    stem = Path(original_filename).stem or "photo"
-    key = f"table_{table_id}/{stem}{suffix}"
-    await storage.upload_site_photo(key, data, detected_mime)
-    return {"key": key, "mime_type": detected_mime, "size": len(data)}
+    for upload in files:
+        data = await upload.read()
+
+        if len(data) > _MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File troppo grande (max 50 MB): {upload.filename or 'photo'}.",
+            )
+
+        detected_mime = magic.from_buffer(data[:2048], mime=True)
+        if not any(detected_mime.startswith(p) for p in _ALLOWED_MIME_PREFIXES):
+            raise HTTPException(
+                status_code=415,
+                detail=f"Tipo di file non supportato: {detected_mime}.",
+            )
+
+        original_filename = upload.filename or "photo"
+        try:
+            data, detected_mime, suffix = await loop.run_in_executor(
+                None,
+                lambda: normalize_media_for_web(
+                    data,
+                    detected_mime,
+                    original_filename,
+                    max_dimension=_MAX_DIMENSION,
+                    jpeg_quality=_JPEG_QUALITY,
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=415, detail=str(exc))
+
+        stem = Path(original_filename).stem or "photo"
+        base_key = f"table_{table_id}/{stem}{suffix}"
+        key = base_key
+        duplicate_idx = 1
+        while key in used_keys:
+            key = f"table_{table_id}/{stem}_{duplicate_idx}{suffix}"
+            duplicate_idx += 1
+
+        await storage.upload_site_photo(key, data, detected_mime)
+        used_keys.add(key)
+        uploaded.append({"key": key, "mime_type": detected_mime, "size": len(data)})
+
+    return {"items": uploaded, "count": len(uploaded)}
 
 
 @router.delete(
