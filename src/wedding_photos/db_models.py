@@ -7,9 +7,9 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 
 from wedding_photos.database import Base
 
@@ -29,7 +29,7 @@ class Guest(Base):
 
 
 # ---------------------------------------------------------------------------
-# Table / TableMedia models
+# Table model
 # ---------------------------------------------------------------------------
 
 
@@ -38,34 +38,11 @@ class Table(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(200), nullable=False)
-    description: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
-    cover: Mapped[str | None] = mapped_column(Text, nullable=True)
     date: Mapped[str | None] = mapped_column(String(100), nullable=True)
-
-    media_items: Mapped[list[TableMedia]] = relationship(
-        "TableMedia",
-        back_populates="table",
-        order_by="TableMedia.position",
-        lazy="selectin",
-        cascade="all, delete-orphan",
-    )
-
-    @property
-    def media(self) -> list[str]:
-        return [m.key for m in self.media_items]
-
-
-class TableMedia(Base):
-    __tablename__ = "table_media"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    table_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("tables.id", ondelete="CASCADE"), nullable=False
-    )
-    key: Mapped[str] = mapped_column(Text, nullable=False)
-    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-
-    table: Mapped[Table] = relationship("Table", back_populates="media_items")
+    subtitle: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    extract: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    media_folder: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
 
 
 # ---------------------------------------------------------------------------

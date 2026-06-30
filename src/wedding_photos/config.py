@@ -50,8 +50,8 @@ GUESTS_YAML: str = os.getenv("GUESTS_YAML", str(BASE_DIR / "data" / "guests.yaml
 # MinIO
 # ---------------------------------------------------------------------------
 MINIO_HOST: str = os.getenv("MINIO_HOST", "localhost")
-MINIO_PORT: str = os.getenv("MINIO_PORT", "9000")
-MINIO_ENDPOINT: str = f"{MINIO_HOST}:{MINIO_PORT}"
+MINIO_EXTERNAL_PORT: str = os.getenv("MINIO_EXTERNAL_PORT", "9000")
+MINIO_ENDPOINT: str = f"{MINIO_HOST}:{MINIO_EXTERNAL_PORT}"
 MINIO_ACCESS_KEY: str = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
 MINIO_SECRET_KEY: str = os.getenv("MINIO_SECRET_KEY", "minioadmin")
 MINIO_SECURE: bool = os.getenv("MINIO_SECURE", "false").lower() == "true"

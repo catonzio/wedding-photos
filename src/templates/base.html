@@ -204,9 +204,9 @@
                  {% if current_table_id is defined and current_table_id == table.id %}bg-sage-light border-l-2 border-sage{% endif %}">
                     <!-- Cover thumbnail -->
                     <div class="w-12 h-12 rounded overflow-hidden flex-shrink-0 bg-sage-light">
-                        {% if table.cover %}
-                        <img src="/wedding-photos/api/site-photos/{{ table.cover }}" alt="{{ table.name }}"
-                            class="w-full h-full object-cover" loading="lazy" />
+                        {% if table_covers is defined and table_covers.get(table.id) %}
+                        <img src="/wedding-photos/api/site-photos/{{ table_covers.get(table.id) }}"
+                            alt="{{ table.name }}" class="w-full h-full object-cover" loading="lazy" />
                         {% endif %}
                     </div>
                     <span class="font-serif text-base font-light text-text leading-tight">{{ table.name }}</span>

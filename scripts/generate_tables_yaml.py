@@ -8,15 +8,6 @@ MEDIA_DIR = Path("static/media")
 OUTPUT_PATH = "data/tables.yaml"
 
 
-def get_media_files(table_dir: Path) -> list[str]:
-    if not table_dir.exists():
-        return []
-    files = sorted(
-        f for f in table_dir.iterdir() if f.name != "cover.jpg" and f.is_file()
-    )
-    return [f"{table_dir.name}/{f.name}" for f in files]
-
-
 def main():
     # Read with extra columns to handle rows where the date field contains an
     # unquoted comma (e.g. "Oggi, 4 Luglio 2026").
@@ -39,7 +30,7 @@ def main():
 
     tables = []
     for i, row in enumerate(df.itertuples(index=False), start=1):
-        table_dir = MEDIA_DIR / f"table_{i}"
+        # table_dir = MEDIA_DIR / f"table_{i}"
 
         name = row.name if pd.notna(row.name) else ""
         date = str(row.date).strip() if pd.notna(row.date) else None
@@ -56,9 +47,7 @@ def main():
         if description:
             entry["description"] = description
 
-        cover_path = f"table_{i}/cover.jpg"
-        entry["cover"] = cover_path
-        entry["media"] = get_media_files(table_dir)
+        entry["media_folder"] = f"table_{i}"
 
         tables.append(entry)
 

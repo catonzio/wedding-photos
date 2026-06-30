@@ -139,9 +139,17 @@ def main() -> None:
         table_id: int = t["id"]
         table_name: str = t.get("name", f"Tavolo {table_id}")
         items: list[str] = []
-        if t.get("cover"):
-            items.append(t["cover"])
-        items.extend(t.get("media", []))
+
+        folder = str(t.get("media_folder", "")).strip().strip("/")
+        if folder:
+            items.append(f"{folder}/cover.jpg")
+            for i in range(1, 7):
+                items.append(f"{folder}/foto_{i}.jpg")
+        else:
+            # Backward compatibility with old YAML structure.
+            if t.get("cover"):
+                items.append(t["cover"])
+            items.extend(t.get("media", []))
 
         for rel_path in items:
             dest = media_dir / rel_path

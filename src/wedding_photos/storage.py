@@ -136,3 +136,33 @@ async def get_site_photo_async(key: str) -> tuple[bytes, str]:
     loop = asyncio.get_event_loop()
 
     return await loop.run_in_executor(None, partial(get_site_photo, key))
+
+
+def list_site_photo_keys(prefix: str) -> list[str]:
+    """Return sorted object keys in the site-photos bucket for *prefix*."""
+    normalized_prefix = prefix.strip().strip("/")
+    if not normalized_prefix:
+        return []
+    normalized_prefix = f"{normalized_prefix}/"
+    
+    if MINIO_SITE_PHOTOS_BUCKET in normalized_prefix:
+        normalized_prefix = normalized_prefix.split(f"{MINIO_SITE_PHOTOS_BUCKET}/", 1)[-1]
+
+    keys: list[str] = []
+    for obj in _client.list_objects(
+        MINIO_SITE_PHOTOS_BUCKET,
+        prefix=normalized_prefix,
+        recursive=True,
+    ):
+        if not obj.object_name:
+            continue
+        if obj.object_name.endswith("/"):
+            continue
+        keys.append(obj.object_name)
+    return sorted(keys)
+
+
+async def list_site_photo_keys_async(prefix: str) -> list[str]:
+    """Async wrapper for listing site-photo keys for *prefix*."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, partial(list_site_photo_keys, prefix))

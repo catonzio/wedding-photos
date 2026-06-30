@@ -60,7 +60,7 @@
      Page — carousel + info + lightbox share one Alpine scope
 ======================================================== -->
 <div x-data="tableApp([
-    {% for item in table.media %}
+    {% for item in table_media %}
     {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
     { src: '/wedding-photos/api/site-photos/{{ item }}', type: 'video', alt: '' },
     {% else %}
@@ -82,7 +82,7 @@
                on: { slideChange(s) { current = s.activeIndex + 1 } }
              })">
             <div class="swiper-wrapper">
-                {% for item in table.media %}
+                {% for item in table_media %}
                 <div class="swiper-slide">
                     {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
                     <video src="/wedding-photos/api/site-photos/{{ item }}" controls playsinline preload="metadata"
@@ -95,11 +95,18 @@
                     {% endif %}
                 </div>
                 {% endfor %}
+                {% if not table_media %}
+                <div class="swiper-slide flex items-center justify-center">
+                    <p class="font-sans font-light text-sm text-muted">Nessuna foto disponibile.</p>
+                </div>
+                {% endif %}
             </div>
             <div class="swiper-pagination" style="bottom: 0.75rem;"></div>
         </div>
 
+        {% if table_media %}
         <div class="slide-counter" x-text="`${current} / ${lbItems.length}`"></div>
+        {% endif %}
     </div>
 
 
@@ -111,7 +118,29 @@
         <!-- Table title -->
         <div class="mt-6">
             <h2 class="font-serif font-light text-3xl text-text leading-tight">{{ table.name }}</h2>
+            <p class="mt-1 font-serif font-light text-lg text-muted leading-tight">Capitolo {{ table.id }}</p>
         </div>
+
+        <!-- Decorative divider -->
+        <div class="divider my-4">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M10 18C10 18 3 13 3 8C3 4.13 6.13 1 10 1C13.87 1 17 4.13 17 8C17 13 10 18 10 18Z"
+                    stroke="currentColor" stroke-width="1.4" />
+                <path d="M10 18V8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+            </svg>
+        </div>
+
+        {% if table.date %}
+        <p class="font-sans font-light text-sm text-muted tracking-[0.08em] uppercase">
+            {{ table.date }}
+        </p>
+        {% endif %}
+
+        {% if table.subtitle %}
+        <p class="mt-2 font-serif font-light italic text-lg text-text leading-relaxed whitespace-pre-line">
+            "{{ table.subtitle }}"
+        </p>
+        {% endif %}
 
         <!-- Decorative divider -->
         <div class="divider my-4">
@@ -124,31 +153,70 @@
 
         <!-- Description -->
         {% if table.description %}
-        <p class="font-sans font-light text-base text-text leading-relaxed">
+        <p class="font-sans font-light text-base text-text leading-relaxed whitespace-pre-line">
             {{ table.description }}
         </p>
         {% endif %}
 
+        {% if table.extract %}
+        <p class="mt-4 font-serif font-light italic text-base text-text leading-relaxed whitespace-pre-line">
+            "{{ table.extract }}"
+        </p>
+        {% endif %}
+
         <!-- Media count -->
-        {% if table.media %}
+        {% if table_media %}
         <div class="mt-5 flex items-center gap-2">
             <span class="font-sans text-[0.7rem] font-500 tracking-[0.12em] uppercase text-muted">
-                {{ table.media | length }} foto in questo tavolo
+                {{ table_media | length }} foto in questo tavolo
             </span>
         </div>
         {% endif %}
 
-        <!-- Back to menu link -->
-        <div class="mt-8 mb-2">
-            <a href="{{ url_for('menu_page') }}?t={{ token }}"
-                class="inline-flex items-center gap-1.5 font-sans text-sm font-light text-sage tracking-wide transition-opacity hover:opacity-70">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                    stroke="currentColor" class="w-4 h-4">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-                </svg>
-                Tutti i tavoli
-            </a>
-        </div>
+        {% set nav = namespace(prev_id=None, next_id=None) %}
+        {% for t in all_tables %}
+        {% if t.id == table.id %}
+        {% if loop.index0 > 0 %}
+        {% set nav.prev_id = all_tables[loop.index0 - 1].id %}
+        {% endif %}
+        {% if loop.index0 < (all_tables | length) - 1 %} {% set nav.next_id=all_tables[loop.index0 + 1].id %} {% endif
+            %} {% endif %} {% endfor %} <!-- Bottom navigation -->
+            <div class="mt-8 mb-2 grid grid-cols-3 items-center gap-3">
+                <div class="justify-self-start">
+                    {% if nav.prev_id %}
+                    <a href="{{ url_for('table_page', table_id=nav.prev_id) }}?t={{ token }}"
+                        class="inline-flex items-center gap-1.5 font-sans text-sm font-light text-sage tracking-wide transition-opacity hover:opacity-70">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
+                        </svg>
+                        Precedente
+                    </a>
+                    {% endif %}
+                </div>
+
+                <div class="justify-self-center">
+                    <a href="{{ url_for('menu_page') }}?t={{ token }}"
+                        class="inline-flex items-center justify-center rounded-full border border-sage px-4 py-1.5 font-sans text-sm font-light text-sage tracking-[0.08em] uppercase transition-colors hover:bg-sage hover:text-white">
+                        Home
+                    </a>
+                </div>
+
+                <div class="justify-self-end">
+                    {% if nav.next_id %}
+                    <a href="{{ url_for('table_page', table_id=nav.next_id) }}?t={{ token }}"
+                        class="inline-flex items-center gap-1.5 font-sans text-sm font-light text-sage tracking-wide transition-opacity hover:opacity-70">
+                        Successivo
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                        </svg>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
 
     </div>
 
