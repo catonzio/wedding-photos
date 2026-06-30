@@ -21,6 +21,7 @@ dependencies = [
     "python-magic>=0.4.27",
     "qrcode>=8.0",
     "libmagic>=1.0",
+    "alembic>=1.18.5",
 ]
 
 [project.scripts]
