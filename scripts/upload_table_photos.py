@@ -37,34 +37,39 @@ Examples
 from __future__ import annotations
 
 import argparse
+import io
 import mimetypes
 import os
 import sys
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# MIME type helpers
-# ---------------------------------------------------------------------------
+# Resolve project root and import shared media utility
+ROOT = Path(__file__).parent.parent
+SRC = ROOT / "src"
+sys.path.insert(0, str(SRC))
 
-_SUPPORTED_SUFFIXES = {
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".webp",
-    ".gif",
-    ".heic",
-    ".heif",
-    ".mp4",
-    ".mov",
-    ".webm",
-    ".avi",
-    ".mkv",
-}
+from wedding_photos.media_utils import normalize_media_for_web  # noqa: E402
+
+_MAX_DIMENSION = 2048
+_JPEG_QUALITY = 82
 
 
 def _mime_for(path: Path) -> str:
     mime, _ = mimetypes.guess_type(str(path))
     return mime or "application/octet-stream"
+
+
+def _normalize_file(path: Path) -> tuple[bytes, str, str]:
+    """Normalize file contents to a browser-safe format and extension."""
+    raw = path.read_bytes()
+    detected_mime = _mime_for(path)
+    return normalize_media_for_web(
+        raw,
+        detected_mime,
+        path.name,
+        max_dimension=_MAX_DIMENSION,
+        jpeg_quality=_JPEG_QUALITY,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -133,9 +138,6 @@ def main() -> None:
         for photo in sorted(table_dir.rglob("*")):
             if not photo.is_file():
                 continue
-            if photo.suffix.lower() not in _SUPPORTED_SUFFIXES:
-                print(f"  SKIP (unsupported type): {photo.relative_to(photos_root)}")
-                continue
             # Key relative to the bucket root, e.g. table_1/cover.jpg
             key = photo.relative_to(photos_root).as_posix()
             files.append((photo, key))
@@ -148,7 +150,12 @@ def main() -> None:
     if args.dry_run:
         print("\n[DRY RUN] The following files would be uploaded:")
         for local, key in files:
-            print(f"  {key}  ({local.stat().st_size:,} bytes)")
+            try:
+                _, _, suffix = _normalize_file(local)
+                normalized_key = str(Path(key).with_suffix(suffix)).replace("\\", "/")
+                print(f"  {normalized_key}  ({local.stat().st_size:,} bytes)")
+            except ValueError as exc:
+                print(f"  SKIP {key}: {exc}")
         return
 
     # Lazy import so the script works even if minio is not installed globally
@@ -181,19 +188,31 @@ def main() -> None:
 
     # Upload
     ok = 0
+    skipped = 0
     errors = 0
     for local, key in files:
-        mime = _mime_for(local)
-        size = local.stat().st_size
         try:
-            client.fput_object(args.bucket, key, str(local), content_type=mime)
-            print(f"  OK  {key}  ({size:,} bytes)")
+            normalized, mime, suffix = _normalize_file(local)
+            normalized_key = str(Path(key).with_suffix(suffix)).replace("\\", "/")
+            size = len(normalized)
+
+            client.put_object(
+                args.bucket,
+                normalized_key,
+                io.BytesIO(normalized),
+                size,
+                content_type=mime,
+            )
+            print(f"  OK  {normalized_key}  ({size:,} bytes)")
             ok += 1
+        except ValueError as exc:
+            print(f"  SKIP {key}: {exc}")
+            skipped += 1
         except Exception as exc:
             print(f"  ERR {key}: {exc}", file=sys.stderr)
             errors += 1
 
-    print(f"\nDone: {ok} uploaded, {errors} errors.")
+    print(f"\nDone: {ok} uploaded, {skipped} skipped, {errors} errors.")
     if errors:
         sys.exit(1)
 

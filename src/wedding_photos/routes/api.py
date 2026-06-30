@@ -14,20 +14,20 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
-import io
 import uuid
+from pathlib import Path
 from typing import Annotated
 
 import magic
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse, Response
-from PIL import Image, ImageOps
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from wedding_photos import storage
 from wedding_photos.config import ADMIN_TOKEN
 from wedding_photos.database import get_session
+from wedding_photos.media_utils import normalize_media_for_web
 from wedding_photos.repositories import GuestRepository, UploadRepository
 
 router = APIRouter(prefix="/api")
@@ -36,52 +36,9 @@ _MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
 _ALLOWED_MIME_PREFIXES = ("image/", "video/")
 
-# Maximum long edge after resizing (pixels). Images larger than this are scaled
-# down proportionally before compression. Set to 0 to disable resizing.
+# Compression settings used by media normalization.
 _MAX_DIMENSION = 2048
-
-# JPEG/WebP compression quality (1–95). 82 gives ~70–80 % size reduction
-# on typical smartphone photos with barely perceptible quality loss.
 _JPEG_QUALITY = 82
-
-
-def _compress_image(data: bytes, mime_type: str) -> tuple[bytes, str]:
-    """Re-encode an image with Pillow to reduce file size.
-
-    HEIC files are decoded by Pillow if pillow-heif is installed; otherwise
-    they are left as-is.  All other recognised formats are re-encoded as JPEG
-    (or kept as PNG when the source has transparency).  Videos are not touched.
-    Returns the (possibly compressed) bytes and the resulting MIME type.
-    """
-    try:
-        img = Image.open(io.BytesIO(data))
-        img = ImageOps.exif_transpose(img)
-    except Exception:
-        # If Pillow can't open it, return the original untouched.
-        return data, mime_type
-
-    # Resize if either dimension exceeds the limit
-    if _MAX_DIMENSION > 0 and max(img.size) > _MAX_DIMENSION:
-        img.thumbnail((_MAX_DIMENSION, _MAX_DIMENSION), Image.Resampling.LANCZOS)
-
-    # Choose output format
-    has_alpha = img.mode in ("RGBA", "LA", "PA") or (
-        img.mode == "P" and "transparency" in img.info
-    )
-    if has_alpha:
-        out_format = "PNG"
-        out_mime = "image/png"
-        save_kwargs: dict = {"optimize": True}
-    else:
-        out_format = "JPEG"
-        out_mime = "image/jpeg"
-        if img.mode != "RGB":
-            img = img.convert("RGB")
-        save_kwargs = {"quality": _JPEG_QUALITY, "optimize": True, "progressive": True}
-
-    buf = io.BytesIO()
-    img.save(buf, format=out_format, **save_kwargs)
-    return buf.getvalue(), out_mime
 
 
 # ---------------------------------------------------------------------------
@@ -189,22 +146,23 @@ async def create_upload(
             detail=f"Tipo di file non supportato: {detected_mime}.",
         )
 
-    # Compress images in a thread pool to avoid blocking the event loop
-    if detected_mime.startswith("image/"):
-        loop = asyncio.get_event_loop()
-        data, detected_mime = await loop.run_in_executor(
-            None, _compress_image, data, detected_mime
-        )
-
-    # Derive extension from the (possibly updated) MIME type
+    # Normalize all media to browser-friendly formats.
+    # This converts HEIC/HEIF and other image formats to JPEG/PNG.
     original_filename = file.filename or "upload"
-    _mime_to_ext = {"image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp"}
-    if detected_mime.startswith("image/"):
-        suffix = _mime_to_ext.get(detected_mime, ".jpg")
-    elif "." in original_filename:
-        suffix = "." + original_filename.rsplit(".", 1)[-1].lower()
-    else:
-        suffix = ""
+    loop = asyncio.get_event_loop()
+    try:
+        data, detected_mime, suffix = await loop.run_in_executor(
+            None,
+            lambda: normalize_media_for_web(
+                data,
+                detected_mime,
+                original_filename,
+                max_dimension=_MAX_DIMENSION,
+                jpeg_quality=_JPEG_QUALITY,
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=415, detail=str(exc))
 
     s3_key = f"uploads/{uuid.uuid4()}{suffix}"
 
@@ -283,8 +241,9 @@ async def admin_upload_table_photo(
 ) -> dict:
     """Upload or replace a photo for *table_id* in the site-photos bucket.
 
-    The file is stored at ``table_{id}/{original_filename}`` and the key is
-    returned so the caller can update ``tables.yaml`` accordingly.
+    The file is normalized to a browser-friendly format and stored at
+    ``table_{id}/{original_stem}{normalized_ext}``. The resulting key is returned
+    so the caller can update ``tables.yaml`` accordingly.
     """
     data = await file.read()
 
@@ -299,7 +258,23 @@ async def admin_upload_table_photo(
         )
 
     original_filename = file.filename or "photo"
-    key = f"table_{table_id}/{original_filename}"
+    loop = asyncio.get_event_loop()
+    try:
+        data, detected_mime, suffix = await loop.run_in_executor(
+            None,
+            lambda: normalize_media_for_web(
+                data,
+                detected_mime,
+                original_filename,
+                max_dimension=_MAX_DIMENSION,
+                jpeg_quality=_JPEG_QUALITY,
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=415, detail=str(exc))
+
+    stem = Path(original_filename).stem or "photo"
+    key = f"table_{table_id}/{stem}{suffix}"
     await storage.upload_site_photo(key, data, detected_mime)
     return {"key": key, "mime_type": detected_mime, "size": len(data)}
 

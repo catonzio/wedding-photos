@@ -43,6 +43,9 @@ async def require_token(request: Request, call_next: Any) -> Response:
     # route dependency), not by the guest-facing secret token.
     if normalized_path.startswith("/api/admin"):
         return await call_next(request)
+    
+    if normalized_path.startswith("/docs"):
+        return await call_next(request)
 
     token = request.query_params.get("t", "")
     if token != SECRET_TOKEN:

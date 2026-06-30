@@ -54,10 +54,9 @@ async def menu_page(
         if not folder:
             return table.id, None
         keys = await storage.list_site_photo_keys_async(folder)
-        cover_key = f"{folder}/cover.jpg"
-        if cover_key in keys:
-            return table.id, cover_key
-        return table.id, (keys[0] if keys else None)
+        covers = [k for k in keys if "/cover" in k]
+
+        return table.id, (covers[-1] if covers else None)
 
     tables = await TableRepository.list_all(session)
     cover_rows = await asyncio.gather(*[_cover_for_table(table) for table in tables])
@@ -86,11 +85,11 @@ async def table_page(
     all_media = await storage.list_site_photo_keys_async(table.media_folder)
     table_cover = [k for k in all_media if "/cover" in k]
     table_cover = table_cover[-1] if table_cover else None
-    table_media = [k for k in all_media]
+    table_media = [k for k in all_media if k != table_cover]
 
     ctx = _base_context(request, tables, current_table_id=table_id)
     ctx["table"] = table
-    ctx["table_media"] = table_media
+    ctx["table_media"] = [table_cover] + table_media
     ctx["table_cover"] = table_cover
     ctx["is_https"] = IS_PRODUCTION or request.url.scheme == "https"
     return templates.TemplateResponse(request=request, name="table.html", context=ctx)

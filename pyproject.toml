@@ -22,6 +22,7 @@ dependencies = [
     "qrcode>=8.0",
     "libmagic>=1.0",
     "alembic>=1.18.5",
+    "pillow-heif>=1.4.0",
 ]
 
 [project.scripts]
