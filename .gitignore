@@ -16,3 +16,6 @@ wheels/
 static
 data
 qr_codes
+
+# Migration files
+alembic/versions/*.py
