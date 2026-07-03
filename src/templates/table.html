@@ -75,15 +75,14 @@
 <!-- ========================================================
      Page — carousel + info + lightbox share one Alpine scope
 ======================================================== -->
-<div x-data="tableApp([
+<div x-data='tableApp([
     {% for item in table_media %}
-    {% if item.endswith('.mp4') or item.endswith('.mov') or item.endswith('.webm') %}
-    { src: '/wedding-photos/api/site-photos/{{ item }}', type: 'video', alt: '' },
-    {% else %}
-    { src: '/wedding-photos/api/site-photos/{{ item }}', type: 'image', alt: 'Foto {{ loop.index }} — {{ table.name }}' },
+    {% if item.endswith(' .mp4') or item.endswith('.mov') or item.endswith('.webm') %} { src: {{
+    ('/wedding-photos/api/site-photos/' ~ item) | tojson }}, type: "video" , alt: "" }, {% else %} { src: {{
+    ('/wedding-photos/api/site-photos/' ~ item) | tojson }}, type: "image" , alt: {{ ('Foto ' ~ loop.index ~ ' - ' ~ table.name) | tojson }} },
     {% endif %}
     {% endfor %}
-])" @keydown.escape.window="lb.open && closeLightbox()" @keydown.arrow-left.window="lb.open && lbPrev()"
+])' @keydown.escape.window="lb.open && closeLightbox()" @keydown.arrow-left.window="lb.open && lbPrev()"
     @keydown.arrow-right.window="lb.open && lbNext()">
 
     <!-- ====================================================
