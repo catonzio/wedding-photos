@@ -2,6 +2,7 @@ function tableApp(lbItems) {
     return {
         current: 1,
         lbItems: lbItems,
+        swiper: null,
 
         lb: {
             open: false, idx: 0,
@@ -116,6 +117,26 @@ function tableApp(lbItems) {
                     }
                 }
             }
+        },
+
+        visibleDotIndices() {
+            const total = this.lbItems.length;
+            const maxVisible = 10;
+            if (total <= maxVisible) {
+                return Array.from({ length: total }, (_, i) => i);
+            }
+
+            const active = Math.max(0, this.current - 1);
+            const half = Math.floor(maxVisible / 2);
+            const maxStart = total - maxVisible;
+            const start = Math.min(maxStart, Math.max(0, active - half));
+
+            return Array.from({ length: maxVisible }, (_, i) => start + i);
+        },
+
+        goToSlide(idx) {
+            if (!this.swiper) return;
+            this.swiper.slideTo(idx);
         },
     };
 }

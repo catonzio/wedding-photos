@@ -8,19 +8,35 @@
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 
 <style>
-    /* Swiper customization */
-    .swiper-pagination-bullet {
-        width: 6px;
-        height: 6px;
-        background: #E8D9A0;
-        opacity: 1;
-        transition: all 0.2s;
+    /* Custom carousel dots (max 10 visible, centered) */
+    .carousel-dots {
+        position: absolute;
+        left: 50%;
+        bottom: 0.75rem;
+        transform: translateX(-50%);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        min-height: 0.75rem;
+        padding: 0 0.25rem;
     }
 
-    .swiper-pagination-bullet-active {
-        background: #B8972E;
+    .carousel-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #E8D9A0;
+        opacity: 0.75;
+        transition: transform 0.2s ease, opacity 0.2s ease, background-color 0.2s ease;
+    }
+
+    .carousel-dot.is-active {
         width: 20px;
         border-radius: 3px;
+        background: #B8972E;
+        opacity: 1;
     }
 
     /* Video inside carousel */
@@ -76,10 +92,24 @@
     <div class="relative md:max-w-[480px] md:mx-auto">
 
         <div class="swiper w-full aspect-[4/3] bg-sage-light" x-init="
-             new Swiper($el, {
+                         let didSwipe = false;
+                         swiper = new Swiper($el, {
                loop: false,
-               pagination: { el: '.swiper-pagination', clickable: true },
-               on: { slideChange(s) { current = s.activeIndex + 1 } }
+                             preventClicks: false,
+                             preventClicksPropagation: false,
+                             on: {
+                                 init(s) { current = s.activeIndex + 1 },
+                                 slideChange(s) { current = s.activeIndex + 1 },
+                                 touchStart() { didSwipe = false },
+                                 sliderMove() { didSwipe = true },
+                                 tap(s) {
+                                     if (didSwipe) return;
+                                     const idx = Number.isInteger(s.clickedIndex) ? s.clickedIndex : s.activeIndex;
+                                     if (lbItems[idx] && lbItems[idx].type === 'image') {
+                                         openLightbox(idx);
+                                     }
+                                 }
+                             }
              })">
             <div class="swiper-wrapper">
                 {% for item in table_media %}
@@ -90,8 +120,7 @@
                     {% else %}
                     <img src="/wedding-photos/api/site-photos/{{ item }}" alt="Foto {{ loop.index }} — {{ table.name }}"
                         class="w-full h-full object-cover cursor-zoom-in"
-                        loading="{% if loop.first %}eager{% else %}lazy{% endif %}"
-                        @click="openLightbox({{ loop.index0 }})" />
+                        loading="{% if loop.first %}eager{% else %}lazy{% endif %}" />
                     {% endif %}
                 </div>
                 {% endfor %}
@@ -101,7 +130,15 @@
                 </div>
                 {% endif %}
             </div>
-            <div class="swiper-pagination" style="bottom: 0.75rem;"></div>
+            {% if (table_media | length) > 1 %}
+            <div class="carousel-dots">
+                <template x-for="idx in visibleDotIndices()" :key="idx">
+                    <button type="button" :class="idx === (current - 1) ? 'carousel-dot is-active' : 'carousel-dot'"
+                        @click="goToSlide(idx)" aria-label="Apri slide">
+                    </button>
+                </template>
+            </div>
+            {% endif %}
         </div>
 
         {% if table_media %}
